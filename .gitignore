@@ -1,0 +1,11 @@
+.qmake.stash
+build/
+*.o
+*.moc
+*.user
+*.Pro.user
+debug/
+release/
+.qtcreator
+.DS_Store
+*.pro.user.*
