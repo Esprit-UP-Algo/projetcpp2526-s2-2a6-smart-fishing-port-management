@@ -16,46 +16,37 @@ AddEditEmployeeDialog::AddEditEmployeeDialog(QWidget *parent, bool isEdit)
 
     QVBoxLayout *mainLayout = new QVBoxLayout(this);
 
-    // Title label
     QLabel *titleLabel = new QLabel(isEdit ? "<b>Edit Employee Information</b>" : "<b>Add New Employee</b>");
     titleLabel->setStyleSheet("font-size: 14px; color: #03224c;");
     mainLayout->addWidget(titleLabel);
 
-    // Form layout
     QFormLayout *formLayout = new QFormLayout();
 
-    // ID field
     lineId = new QLineEdit(this);
-    lineId->setReadOnly(isEdit); // ID is read-only in edit mode
+    lineId->setReadOnly(isEdit);
     formLayout->addRow("Employee ID:", lineId);
 
-    // Name field
     lineNom = new QLineEdit(this);
     formLayout->addRow("Full Name:", lineNom);
 
-    // Position field (ComboBox)
     comboPoste = new QComboBox(this);
     comboPoste->addItems({"Pêcheur", "Matelot", "Docker", "Chef de quai", "Superviseur"});
     formLayout->addRow("Position:", comboPoste);
 
-    // Email field
     lineEmail = new QLineEdit(this);
     lineEmail->setPlaceholderText("name@example.com");
     formLayout->addRow("Email:", lineEmail);
 
-    // Telephone field
     lineTelephone = new QLineEdit(this);
     lineTelephone->setPlaceholderText("Phone number");
     formLayout->addRow("Phone:", lineTelephone);
 
-    // Salary field
     lineSalaire = new QLineEdit(this);
     lineSalaire->setPlaceholderText("0");
     formLayout->addRow("Salary (TND):", lineSalaire);
 
     mainLayout->addLayout(formLayout);
 
-    // Buttons
     QDialogButtonBox *buttonBox = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
     buttonBox->button(QDialogButtonBox::Ok)->setText("Save");
     buttonBox->button(QDialogButtonBox::Cancel)->setText("Cancel");
@@ -115,7 +106,6 @@ void AddEditEmployeeDialog::setEmployeeData(const QString &id, const QString &no
 
 void AddEditEmployeeDialog::onAccepted()
 {
-    // Validate form data
     if (lineId->text().trimmed().isEmpty()) {
         QMessageBox::warning(this, "Error", "Please enter Employee ID");
         lineId->setFocus();

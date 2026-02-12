@@ -12,7 +12,6 @@ public:
     explicit AddEditEmployeeDialog(QWidget *parent = nullptr, bool isEdit = false);
     ~AddEditEmployeeDialog();
 
-    // Getters
     QString getId() const;
     QString getNom() const;
     QString getPoste() const;
@@ -20,7 +19,6 @@ public:
     QString getTelephone() const;
     double getSalaire() const;
 
-    // Setters for edit mode
     void setEmployeeData(const QString &id, const QString &nom, const QString &poste,
                         const QString &email, const QString &telephone, double salary);
 
@@ -37,4 +35,4 @@ private:
     bool isEditMode;
 };
 
-#endif // ADDEDIT_EMPLOYEEDIALOG_H
+#endif

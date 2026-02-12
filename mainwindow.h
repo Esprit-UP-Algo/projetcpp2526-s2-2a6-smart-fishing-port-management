@@ -18,22 +18,18 @@ public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
-    // Page indices
     enum Page {
         LoginPage = 0,
         EmployeesPage = 1
     };
 
-    // Screen switching functions
     void showLoginPage();
     void showEmployeesPage();
 
 private slots:
-    // Login page slots
     void onLoginClicked();
     void onForgotPasswordClicked();
 
-    // Employees page slots
     void onLogoutClicked();
     void onAddEmployeeClicked();
     void onEditEmployeeClicked(int row);
@@ -41,7 +37,6 @@ private slots:
     void onSearchEmployees(const QString &text);
     void onShowAnalytics();
 
-    // Sorting slots
     void onSortByPositionClicked();
     void onSortBySalaryClicked();
 
@@ -52,11 +47,10 @@ private:
     void updateSalaryStats();
     void generateAnalyticsPDF();
 
-    // Analytics data storage for PDF generation
     QString analyticsStatsText;
-    void* analyticsPieChart = nullptr;     // QChart* - stored as void* to avoid header includes
-    void* analyticsBarChart = nullptr;     // QChart* - stored as void* to avoid header includes
+    void* analyticsPieChart = nullptr;
+    void* analyticsBarChart = nullptr;
 
     Ui::MainWindow *ui;
 };
-#endif // MAINWINDOW_H
+#endif

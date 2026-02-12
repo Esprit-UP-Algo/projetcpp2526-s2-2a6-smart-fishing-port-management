@@ -31,4 +31,4 @@ private:
     QLineEdit *linePhone; 
 };
 
-#endif // FORGOTPASSWORDDIALOG_H
+#endif

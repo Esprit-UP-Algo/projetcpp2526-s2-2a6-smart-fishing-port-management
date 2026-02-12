@@ -36,16 +36,12 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
     
-    // Setup table on employees page
     setupTableEmployees();
     
-    // Connect signals
     setupConnections();
     
-    // Show login page first
     showLoginPage();
     
-    // Initial stats update
     updateEmployeeStats();
     updateSalaryStats();
 }
@@ -80,7 +76,6 @@ void MainWindow::setupTableEmployees()
         table->setItem(i, 4, new QTableWidgetItem(tels[i]));
         table->setItem(i, 5, new QTableWidgetItem(salaires[i] + " TND"));
         
-        // Edit button
         QPushButton* btnEdit = new QPushButton("✏️");
         btnEdit->setToolTip("Edit");
         btnEdit->setStyleSheet(
@@ -105,7 +100,6 @@ void MainWindow::setupTableEmployees()
         });
         table->setCellWidget(i, 6, btnEdit);
         
-        // Delete button
         QPushButton* btnDelete = new QPushButton("🗑️");
         btnDelete->setToolTip("Delete");
         btnDelete->setStyleSheet(
@@ -131,17 +125,14 @@ void MainWindow::setupTableEmployees()
         table->setCellWidget(i, 7, btnDelete);
     }
     
-    // Hide the ID column
     table->setColumnHidden(0, true);
 }
 
 void MainWindow::setupConnections()
 {
-    // Login page connections
     connect(ui->btnLogin, &QPushButton::clicked, this, &MainWindow::onLoginClicked);
     connect(ui->btnForgotPassword, &QPushButton::clicked, this, &MainWindow::onForgotPasswordClicked);
     
-    // Employees page connections
     connect(ui->btnLogout, &QPushButton::clicked, this, &MainWindow::onLogoutClicked);
     connect(ui->btnAdd, &QPushButton::clicked, this, &MainWindow::onAddEmployeeClicked);
     connect(ui->lineSearch, &QLineEdit::textChanged, this, &MainWindow::onSearchEmployees);
@@ -153,7 +144,6 @@ void MainWindow::setupConnections()
 void MainWindow::showLoginPage()
 {
     ui->stackedWidget->setCurrentIndex(LoginPage);
-    // Clear login form
     ui->lineUsername->clear();
     ui->linePassword->clear();
 }
@@ -176,7 +166,6 @@ void MainWindow::onLoginClicked()
         return;
     }
     
-    // For now, accept any login (in real app, validate credentials)
     QMessageBox::information(this, "Success", "Login successful!");
     showEmployeesPage();
 }
@@ -214,7 +203,6 @@ void MainWindow::onAddEmployeeClicked()
         table->setItem(newRow, 4, new QTableWidgetItem(dialog.getTelephone()));
         table->setItem(newRow, 5, new QTableWidgetItem(QString::number(dialog.getSalaire(), 'f', 0) + " TND"));
         
-        // Edit button
         QPushButton* btnEdit = new QPushButton("✏️");
         btnEdit->setMaximumWidth(40);
         btnEdit->setStyleSheet(
@@ -375,22 +363,19 @@ void MainWindow::onSortByPositionClicked()
     if (!table || table->rowCount() == 0)
         return;
     
-    // Create a list of rows with their data
     QList<QStringList> rows;
     for (int i = 0; i < table->rowCount(); ++i) {
         QStringList row;
-        for (int j = 0; j < table->columnCount() - 2; ++j) { // Exclude action columns
+        for (int j = 0; j < table->columnCount() - 2; ++j) {
             row << (table->item(i, j) ? table->item(i, j)->text() : "");
         }
         rows.append(row);
     }
     
-    // Sort by Poste (column 2 = index 2)
     std::sort(rows.begin(), rows.end(), [](const QStringList& a, const QStringList& b) {
-        return a[2] < b[2]; // Column 2 is Poste
+        return a[2] < b[2];
     });
     
-    // Update table with sorted data
     for (int i = 0; i < rows.size(); ++i) {
         for (int j = 0; j < rows[i].size(); ++j) {
             if (j < table->columnCount() - 2) {
@@ -408,26 +393,23 @@ void MainWindow::onSortBySalaryClicked()
     if (!table || table->rowCount() == 0)
         return;
     
-    // Create a list of rows with their data
     QList<QStringList> rows;
     for (int i = 0; i < table->rowCount(); ++i) {
         QStringList row;
-        for (int j = 0; j < table->columnCount() - 2; ++j) { // Exclude action columns
+        for (int j = 0; j < table->columnCount() - 2; ++j) {
             row << (table->item(i, j) ? table->item(i, j)->text() : "");
         }
         rows.append(row);
     }
     
-    // Sort by Salaire (column 5), numerically in descending order
     std::sort(rows.begin(), rows.end(), [](const QStringList& a, const QStringList& b) {
         QString salaryAStr = a[5];
         QString salaryBStr = b[5];
         double salaryA = salaryAStr.replace(" TND", "").toDouble();
         double salaryB = salaryBStr.replace(" TND", "").toDouble();
-        return salaryA > salaryB; // Descending order (highest first)
+        return salaryA > salaryB;
     });
     
-    // Update table with sorted data
     for (int i = 0; i < rows.size(); ++i) {
         for (int j = 0; j < rows[i].size(); ++j) {
             if (j < table->columnCount() - 2) {
@@ -447,17 +429,15 @@ void MainWindow::onShowAnalytics()
         return;
     }
     
-    // Create a modal dialog
+    
     QDialog* analyticsDialog = new QDialog(this);
     analyticsDialog->setWindowTitle("📊 Employee Analytics & Statistics");
     analyticsDialog->setGeometry(100, 100, 1000, 700);
     
     QVBoxLayout* layout = new QVBoxLayout(analyticsDialog);
     
-    // Create horizontal layout for two charts
     QHBoxLayout* chartsLayout = new QHBoxLayout();
     
-    // ===== CHART 1: Salary Distribution (Pie Chart) =====
     QMap<QString, double> salaryByPosition;
     for (int i = 0; i < table->rowCount(); ++i) {
         QString poste = table->item(i, 2)->text();
@@ -482,14 +462,12 @@ void MainWindow::onShowAnalytics()
     pieChart->setTitle("Salary Distribution by Position");
     pieChart->setAnimationOptions(QChart::SeriesAnimations);
     
-    // Store for PDF generation
     analyticsPieChart = reinterpret_cast<void*>(pieChart);
     
     QChartView* pieChartView = new QChartView(pieChart);
     pieChartView->setRenderHint(QPainter::Antialiasing);
     pieChartView->setMinimumWidth(450);
     
-    // ===== CHART 2: Position Count (Bar Chart) =====
     QMap<QString, int> positionCount;
     for (int i = 0; i < table->rowCount(); ++i) {
         QString poste = table->item(i, 2)->text();
@@ -513,7 +491,7 @@ void MainWindow::onShowAnalytics()
     barChart->setTitle("Employee Count by Position");
     barChart->setAnimationOptions(QChart::SeriesAnimations);
     
-    // Store for PDF generation
+   
     analyticsBarChart = reinterpret_cast<void*>(barChart);
     
     QBarCategoryAxis* axisX = new QBarCategoryAxis();
@@ -532,7 +510,6 @@ void MainWindow::onShowAnalytics()
     chartsLayout->addWidget(pieChartView);
     chartsLayout->addWidget(barChartView);
     
-    // ===== STATISTICS BOX =====
     QString statsText = "<b>📈 SALARY STATISTICS</b><br><br>";
     
     double totalSalary = 0;
@@ -561,7 +538,7 @@ void MainWindow::onShowAnalytics()
         statsText += QString("%1: <b>%2</b> employees<br>").arg(it.key()).arg(it.value());
     }
     
-    // Store stats text for PDF generation
+    
     analyticsStatsText = statsText;
     
     QLabel* statsLabel = new QLabel(statsText);
@@ -576,16 +553,16 @@ void MainWindow::onShowAnalytics()
     layout->addLayout(chartsLayout, 3);
     layout->addWidget(scrollArea, 1);
     
-    // Buttons layout
+    
     QHBoxLayout* buttonLayout = new QHBoxLayout();
     
-    // PDF button
+    
     QPushButton* pdfBtn = new QPushButton("📄 Generate PDF");
     pdfBtn->setStyleSheet("QPushButton { background-color: #1e40af; color: white; padding: 10px; border-radius: 5px; font-weight: bold; }");
     connect(pdfBtn, &QPushButton::clicked, this, &MainWindow::generateAnalyticsPDF);
     buttonLayout->addWidget(pdfBtn);
     
-    // Close button
+    
     QPushButton* closeBtn = new QPushButton("Close");
     closeBtn->setStyleSheet("QPushButton { background-color: #03224c; color: white; padding: 10px; border-radius: 5px; font-weight: bold; }");
     connect(closeBtn, &QPushButton::clicked, analyticsDialog, &QDialog::accept);
@@ -620,7 +597,7 @@ void MainWindow::generateAnalyticsPDF()
     
     int pageWidth = pdfWriter.width();
     int margin = 80;
-    int lineHeight = 40;  // Explicit line height
+    int lineHeight = 40;  
     
     QFont titleFont("Arial", 24, QFont::Bold);
     QFont headingFont("Arial", 14, QFont::Bold);
@@ -630,7 +607,6 @@ void MainWindow::generateAnalyticsPDF()
     int y = 80;
     QTableWidget* table = ui->tableEmployees;
     
-    // Calculate stats
     double totalSalary = 0;
     double highestSalary = 0;
     double lowestSalary = std::numeric_limits<double>::max();
@@ -663,16 +639,13 @@ void MainWindow::generateAnalyticsPDF()
                      "Generated: " + QDateTime::currentDateTime().toString("dd/MM/yyyy hh:mm"));
     y += 50;
     
-    // LINE
     painter.drawLine(margin, y, pageWidth - margin, y);
     y += 40;
     
-    // HEADING 1
     painter.setFont(headingFont);
     painter.drawText(margin, y, pageWidth - 2*margin, 30, Qt::AlignLeft, "📊 Statistics Summary");
     y += 50;
     
-    // STATS - Each on own line
     painter.setFont(normalFont);
     
     painter.drawText(margin + 40, y, pageWidth - 2*margin - 40, 25, Qt::AlignLeft, 
@@ -695,18 +668,14 @@ void MainWindow::generateAnalyticsPDF()
                      "Total Monthly Payroll: " + QString::number(static_cast<int>(totalSalary)) + " TND");
     y += 50;
     
-    // LINE
     painter.drawLine(margin, y, pageWidth - margin, y);
     y += 40;
     
-    // HEADING 2
     painter.setFont(headingFont);
     painter.drawText(margin, y, pageWidth - 2*margin, 30, Qt::AlignLeft, "👤 Position Breakdown");
     y += 50;
     
     painter.setFont(normalFont);
-    
-    // POSITIONS - Each with spacing
     for (auto it = positionCount.begin(); it != positionCount.end(); ++it) {
         double avgPay = it.value() > 0 ? salaryByPosition[it.key()] / it.value() : 0;
         
