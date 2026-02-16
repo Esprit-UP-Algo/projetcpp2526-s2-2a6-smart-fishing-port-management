@@ -1,0 +1,11 @@
+debug/gestioncaptures.o
+debug/gestionnavires.o
+debug/gestionquai.o
+debug/gestionutilisateurs.o
+debug/main.o
+debug/mainwindow.o
+debug/moc_gestioncaptures.o
+debug/moc_gestionnavires.o
+debug/moc_gestionquai.o
+debug/moc_gestionutilisateurs.o
+debug/moc_mainwindow.o

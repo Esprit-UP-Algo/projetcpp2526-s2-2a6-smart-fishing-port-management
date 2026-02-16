@@ -1,0 +1,638 @@
+#include "gestioncaptures.h"
+#include <QVBoxLayout>
+#include <QHBoxLayout>
+#include <QFormLayout>
+#include <QGridLayout>
+#include <QHeaderView>
+#include <QFileDialog>
+#include <QTextStream>
+#include <QDesktopServices>
+
+GestionCaptures::GestionCaptures(QWidget *parent) : QWidget(parent), modeModification(false)
+{
+    QString dataDir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    QDir().mkpath(dataDir);
+    m_jsonPath = QDir(dataDir).filePath("captures.json");
+
+    configurerInterface();
+    chargerCaptures();
+    mettreAJourStatistiques();
+}
+
+GestionCaptures::~GestionCaptures()
+{
+    sauvegarderCaptures();
+}
+
+void GestionCaptures::configurerInterface()
+{
+    QVBoxLayout *mainLayout = new QVBoxLayout(this);
+    mainLayout->setContentsMargins(0, 0, 0, 0);
+    mainLayout->setSpacing(0);
+
+    // Barre d'outils
+    QHBoxLayout *toolbar = new QHBoxLayout;
+    toolbar->setContentsMargins(10, 10, 10, 10);
+    toolbar->setSpacing(10);
+
+    btnAjouter = new QPushButton("➕ Ajouter");
+    btnModifier = new QPushButton("✏️ Modifier");
+    btnSupprimer = new QPushButton("🗑️ Supprimer");
+    btnConsulter = new QPushButton("📋 Consulter");
+    btnExporter = new QPushButton("📥 Exporter CSV");
+    btnActualiser = new QPushButton("🔄 Actualiser");
+
+    QList<QPushButton*> toolButtons = {btnAjouter, btnModifier, btnSupprimer, btnConsulter, btnExporter, btnActualiser};
+    foreach(QPushButton *btn, toolButtons) {
+        btn->setMinimumHeight(40);
+        btn->setCursor(Qt::PointingHandCursor);
+        btn->setStyleSheet("background-color: #3b82f6; color: white; border-radius: 6px; padding: 8px 15px; font-weight: bold;");
+        toolbar->addWidget(btn);
+    }
+    toolbar->addStretch();
+
+    mainLayout->addLayout(toolbar);
+
+    // Cadre principal
+    QWidget *mainFrame = new QWidget;
+    mainFrame->setObjectName("pageFrame");
+    mainFrame->setStyleSheet("background: #1e3a8a; border-radius: 12px; margin: 10px;");
+
+    pages = new QStackedWidget(mainFrame);
+
+    configurerTableauBord();
+    configurerFormulaire();
+
+    pages->addWidget(pageTableauBord);
+    pages->addWidget(pageFormulaire);
+
+    QVBoxLayout *frameLayout = new QVBoxLayout(mainFrame);
+    frameLayout->addWidget(pages);
+    frameLayout->setContentsMargins(20, 20, 20, 20);
+
+    mainLayout->addWidget(mainFrame);
+
+    connect(btnAjouter, &QPushButton::clicked, this, &GestionCaptures::viderFormulaire);
+    connect(btnModifier, &QPushButton::clicked, this, &GestionCaptures::modifierCapture);
+    connect(btnSupprimer, &QPushButton::clicked, this, &GestionCaptures::supprimerCapture);
+    connect(btnConsulter, &QPushButton::clicked, this, &GestionCaptures::afficherStatistiques);
+    connect(btnExporter, &QPushButton::clicked, this, &GestionCaptures::exporterCSV);
+    connect(btnActualiser, &QPushButton::clicked, this, &GestionCaptures::actualiserTable);
+
+    appliquerStyles();
+    afficherStatistiques();
+}
+
+void GestionCaptures::configurerTableauBord()
+{
+    pageTableauBord = new QWidget;
+    QVBoxLayout *layout = new QVBoxLayout(pageTableauBord);
+    layout->setContentsMargins(30, 30, 30, 30);
+    layout->setSpacing(25);
+
+    QLabel *titre = new QLabel("Gestion des captures de poissons");
+    titre->setStyleSheet("font-size: 24px; font-weight: bold; color: #1e3a8a;");
+
+    QHBoxLayout *cartesLayout = new QHBoxLayout;
+    cartesLayout->setSpacing(20);
+
+    QFrame *carteTotal = new QFrame;
+    carteTotal->setStyleSheet("background-color: white; border-radius: 12px; border: 1px solid #e2e8f0; padding: 20px;");
+    carteTotal->setMinimumHeight(130);
+    QVBoxLayout *layoutTotal = new QVBoxLayout(carteTotal);
+    layoutTotal->addWidget(new QLabel("📊"), 0, Qt::AlignCenter);
+    labelNbTotal = new QLabel("0");
+    labelNbTotal->setStyleSheet("font-size: 32px; font-weight: bold; color: #1e3a8a;");
+    layoutTotal->addWidget(labelNbTotal, 0, Qt::AlignCenter);
+    layoutTotal->addWidget(new QLabel("Total captures"), 0, Qt::AlignCenter);
+
+    QFrame *cartePoisson = new QFrame;
+    cartePoisson->setStyleSheet("background-color: white; border-radius: 12px; border: 1px solid #e2e8f0; padding: 20px;");
+    QVBoxLayout *layoutPoisson = new QVBoxLayout(cartePoisson);
+    layoutPoisson->addWidget(new QLabel("🐟"), 0, Qt::AlignCenter);
+    labelNbPoisson = new QLabel("0");
+    labelNbPoisson->setStyleSheet("font-size: 32px; font-weight: bold; color: #0891b2;");
+    layoutPoisson->addWidget(labelNbPoisson, 0, Qt::AlignCenter);
+    layoutPoisson->addWidget(new QLabel("Poissons"), 0, Qt::AlignCenter);
+
+    QFrame *carteCrustace = new QFrame;
+    carteCrustace->setStyleSheet("background-color: white; border-radius: 12px; border: 1px solid #e2e8f0; padding: 20px;");
+    QVBoxLayout *layoutCrustace = new QVBoxLayout(carteCrustace);
+    layoutCrustace->addWidget(new QLabel("🦐"), 0, Qt::AlignCenter);
+    labelNbCrustace = new QLabel("0");
+    labelNbCrustace->setStyleSheet("font-size: 32px; font-weight: bold; color: #f59e0b;");
+    layoutCrustace->addWidget(labelNbCrustace, 0, Qt::AlignCenter);
+    layoutCrustace->addWidget(new QLabel("Crustacés"), 0, Qt::AlignCenter);
+
+    QFrame *carteMollusque = new QFrame;
+    carteMollusque->setStyleSheet("background-color: white; border-radius: 12px; border: 1px solid #e2e8f0; padding: 20px;");
+    QVBoxLayout *layoutMollusque = new QVBoxLayout(carteMollusque);
+    layoutMollusque->addWidget(new QLabel("🐚"), 0, Qt::AlignCenter);
+    labelNbMollusque = new QLabel("0");
+    labelNbMollusque->setStyleSheet("font-size: 32px; font-weight: bold; color: #10b981;");
+    layoutMollusque->addWidget(labelNbMollusque, 0, Qt::AlignCenter);
+    layoutMollusque->addWidget(new QLabel("Mollusques"), 0, Qt::AlignCenter);
+
+    cartesLayout->addWidget(carteTotal);
+    cartesLayout->addWidget(cartePoisson);
+    cartesLayout->addWidget(carteCrustace);
+    cartesLayout->addWidget(carteMollusque);
+
+    QHBoxLayout *actionsLayout = new QHBoxLayout;
+
+    lineRecherche = new QLineEdit;
+    lineRecherche->setPlaceholderText("🔍 Rechercher par navire, type de poisson ou agent...");
+    lineRecherche->setFixedWidth(400);
+    lineRecherche->setStyleSheet("padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; background: white;");
+
+    actionsLayout->addWidget(lineRecherche);
+    actionsLayout->addStretch();
+
+    tableCaptures = new QTableWidget;
+    tableCaptures->setColumnCount(9);
+    QStringList headers = {"ID", "Navire", "Type", "Icône", "Quantité", "Date", "Heure", "Agent", "Statut"};
+    tableCaptures->setHorizontalHeaderLabels(headers);
+    tableCaptures->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+    tableCaptures->setSelectionBehavior(QAbstractItemView::SelectRows);
+    tableCaptures->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    tableCaptures->verticalHeader()->setVisible(false);
+    tableCaptures->setMinimumHeight(400);
+    tableCaptures->setStyleSheet("background: white; border: 1px solid #e2e8f0; border-radius: 8px;");
+
+    layout->addWidget(titre);
+    layout->addLayout(cartesLayout);
+    layout->addLayout(actionsLayout);
+    layout->addWidget(tableCaptures);
+
+    connect(lineRecherche, &QLineEdit::textChanged, this, &GestionCaptures::rechercherCapture);
+}
+
+void GestionCaptures::configurerFormulaire()
+{
+    pageFormulaire = new QWidget;
+    QVBoxLayout *layout = new QVBoxLayout(pageFormulaire);
+    layout->setContentsMargins(30, 30, 30, 30);
+    layout->setSpacing(20);
+
+    QLabel *titre = new QLabel("➕ Ajouter une capture");
+    titre->setStyleSheet("font-size: 24px; font-weight: bold; color: #1e3a8a;");
+    titre->setObjectName("titreFormulaire");
+
+    QFrame *formFrame = new QFrame;
+    formFrame->setStyleSheet("background-color: white; border-radius: 12px; border: 1px solid #e2e8f0; padding: 30px;");
+
+    QGridLayout *formLayout = new QGridLayout(formFrame);
+    formLayout->setHorizontalSpacing(30);
+    formLayout->setVerticalSpacing(15);
+
+    editCaptureId = new QLineEdit;
+    editCaptureId->setVisible(false);
+
+    formLayout->addWidget(new QLabel("🚢 Navire:"), 0, 0);
+    editShipName = new QLineEdit;
+    editShipName->setPlaceholderText("Nom du navire");
+    editShipName->setMinimumHeight(40);
+    formLayout->addWidget(editShipName, 0, 1);
+
+    formLayout->addWidget(new QLabel("👤 Agent:"), 0, 2);
+    editAgent = new QLineEdit;
+    editAgent->setPlaceholderText("Nom de l'agent");
+    editAgent->setMinimumHeight(40);
+    formLayout->addWidget(editAgent, 0, 3);
+
+    formLayout->addWidget(new QLabel("🐟 Type:"), 1, 0);
+    comboFishType = new QComboBox;
+    comboFishType->addItems({"Poisson", "Crustacé", "Mollusque", "Requin", "Thon", "Saumon", "Bar", "Crabe", "Homard", "Crevette", "Huître", "Moule"});
+    comboFishType->setMinimumHeight(40);
+    formLayout->addWidget(comboFishType, 1, 1);
+
+    formLayout->addWidget(new QLabel("🎯 Icône:"), 1, 2);
+    editFishIcon = new QLineEdit;
+    editFishIcon->setText("🐟");
+    editFishIcon->setMinimumHeight(40);
+    editFishIcon->setMaximumWidth(80);
+    formLayout->addWidget(editFishIcon, 1, 3);
+
+    formLayout->addWidget(new QLabel("⚖️ Quantité:"), 2, 0);
+    spinQuantity = new QSpinBox;
+    spinQuantity->setRange(1, 10000);
+    spinQuantity->setValue(100);
+    spinQuantity->setSuffix(" kg");
+    spinQuantity->setMinimumHeight(40);
+    formLayout->addWidget(spinQuantity, 2, 1);
+
+    formLayout->addWidget(new QLabel("📍 Zone:"), 2, 2);
+    editZone = new QLineEdit;
+    editZone->setPlaceholderText("Zone de pêche");
+    editZone->setMinimumHeight(40);
+    formLayout->addWidget(editZone, 2, 3);
+
+    formLayout->addWidget(new QLabel("📅 Date:"), 3, 0);
+    dateCaptureDate = new QDateEdit;
+    dateCaptureDate->setDate(QDate::currentDate());
+    dateCaptureDate->setCalendarPopup(true);
+    dateCaptureDate->setMinimumHeight(40);
+    formLayout->addWidget(dateCaptureDate, 3, 1);
+
+    formLayout->addWidget(new QLabel("⏰ Heure:"), 3, 2);
+    editTime = new QLineEdit;
+    editTime->setText(QTime::currentTime().toString("HH:mm"));
+    editTime->setMinimumHeight(40);
+    formLayout->addWidget(editTime, 3, 3);
+
+    formLayout->addWidget(new QLabel("🎣 Méthode:"), 4, 0);
+    comboMethod = new QComboBox;
+    comboMethod->addItems({"Filet", "Ligne", "Casier", "Chalut", "Palangre", "Harpon", "Autre"});
+    comboMethod->setMinimumHeight(40);
+    formLayout->addWidget(comboMethod, 4, 1);
+
+    formLayout->addWidget(new QLabel("📊 Statut:"), 4, 2);
+    comboStatus = new QComboBox;
+    comboStatus->addItems({"Enregistré", "Validé", "En transit", "Livré", "En attente"});
+    comboStatus->setMinimumHeight(40);
+    formLayout->addWidget(comboStatus, 4, 3);
+
+    formLayout->addWidget(new QLabel("🗺️ Latitude:"), 5, 0);
+    spinLatitude = new QDoubleSpinBox;
+    spinLatitude->setRange(-90, 90);
+    spinLatitude->setDecimals(6);
+    spinLatitude->setValue(48.8566);
+    spinLatitude->setMinimumHeight(40);
+    formLayout->addWidget(spinLatitude, 5, 1);
+
+    formLayout->addWidget(new QLabel("🗺️ Longitude:"), 5, 2);
+    spinLongitude = new QDoubleSpinBox;
+    spinLongitude->setRange(-180, 180);
+    spinLongitude->setDecimals(6);
+    spinLongitude->setValue(2.3522);
+    spinLongitude->setMinimumHeight(40);
+    formLayout->addWidget(spinLongitude, 5, 3);
+
+    formLayout->addWidget(new QLabel("💬 Commentaires:"), 6, 0);
+    textComments = new QTextEdit;
+    textComments->setMaximumHeight(100);
+    textComments->setPlaceholderText("Commentaires supplémentaires...");
+    formLayout->addWidget(textComments, 6, 1, 1, 3);
+
+    QHBoxLayout *btnLayout = new QHBoxLayout;
+    btnSave = new QPushButton("💾 Enregistrer");
+    btnCancel = new QPushButton("❌ Annuler");
+
+    btnSave->setMinimumHeight(50);
+    btnCancel->setMinimumHeight(50);
+    btnSave->setCursor(Qt::PointingHandCursor);
+    btnCancel->setCursor(Qt::PointingHandCursor);
+    btnSave->setStyleSheet("background-color: #3b82f6; color: white; font-weight: bold; font-size: 16px; padding: 12px; border-radius: 8px;");
+    btnCancel->setStyleSheet("background-color: #ef4444; color: white; font-weight: bold; font-size: 16px; padding: 12px; border-radius: 8px;");
+
+    btnLayout->addStretch();
+    btnLayout->addWidget(btnSave);
+    btnLayout->addWidget(btnCancel);
+    btnLayout->addStretch();
+
+    layout->addWidget(titre);
+    layout->addWidget(formFrame);
+    layout->addLayout(btnLayout);
+    layout->addStretch();
+
+    connect(btnSave, &QPushButton::clicked, this, &GestionCaptures::ajouterCapture);
+    connect(btnCancel, &QPushButton::clicked, this, &GestionCaptures::afficherStatistiques);
+}
+
+void GestionCaptures::chargerCaptures()
+{
+    listeCaptures.clear();
+
+    QFile file(m_jsonPath);
+    if (!file.exists()) {
+        Capture c1;
+        c1.shipName = "Neptune";
+        c1.fishType = "Thon";
+        c1.quantity = 250;
+        c1.agent = "Jean";
+        listeCaptures.append(c1);
+
+        Capture c2;
+        c2.shipName = "Atlantis";
+        c2.fishType = "Crabe";
+        c2.quantity = 120;
+        c2.agent = "Marie";
+        c2.status = "Validé";
+        listeCaptures.append(c2);
+
+        Capture c3;
+        c3.shipName = "Océan";
+        c3.fishType = "Saumon";
+        c3.quantity = 180;
+        c3.agent = "Pierre";
+        c3.status = "En transit";
+        listeCaptures.append(c3);
+
+        sauvegarderCaptures();
+        return;
+    }
+
+    if (!file.open(QIODevice::ReadOnly)) return;
+
+    QByteArray data = file.readAll();
+    file.close();
+
+    QJsonDocument doc = QJsonDocument::fromJson(data);
+    if (!doc.isArray()) return;
+
+    QJsonArray array = doc.array();
+    for (const QJsonValue &val : array) {
+        if (val.isObject()) {
+            Capture c;
+            c.fromJson(val.toObject());
+            listeCaptures.append(c);
+        }
+    }
+}
+
+void GestionCaptures::sauvegarderCaptures()
+{
+    QJsonArray array;
+    for (const Capture &c : listeCaptures) {
+        array.append(c.toJson());
+    }
+
+    QJsonDocument doc(array);
+    QFile file(m_jsonPath);
+    if (file.open(QIODevice::WriteOnly)) {
+        file.write(doc.toJson());
+        file.close();
+    }
+}
+
+void GestionCaptures::actualiserTable()
+{
+    if (!tableCaptures) return;
+
+    tableCaptures->setRowCount(0);
+    for (const Capture &c : listeCaptures) {
+        int row = tableCaptures->rowCount();
+        tableCaptures->insertRow(row);
+
+        tableCaptures->setItem(row, 0, new QTableWidgetItem(c.captureId.left(8)));
+        tableCaptures->setItem(row, 1, new QTableWidgetItem(c.shipName));
+        tableCaptures->setItem(row, 2, new QTableWidgetItem(c.fishType));
+        tableCaptures->setItem(row, 3, new QTableWidgetItem(c.fishIcon));
+        tableCaptures->setItem(row, 4, new QTableWidgetItem(QString::number(c.quantity) + " kg"));
+        tableCaptures->setItem(row, 5, new QTableWidgetItem(c.captureDate.toString("dd/MM/yyyy")));
+        tableCaptures->setItem(row, 6, new QTableWidgetItem(c.time));
+        tableCaptures->setItem(row, 7, new QTableWidgetItem(c.agent));
+
+        QTableWidgetItem *statusItem = new QTableWidgetItem(c.status);
+        statusItem->setTextAlignment(Qt::AlignCenter);
+        if (c.status == "Enregistré") {
+            statusItem->setBackground(QColor("#fef3c7"));
+            statusItem->setForeground(QColor("#92400e"));
+        } else if (c.status == "Validé") {
+            statusItem->setBackground(QColor("#d1fae5"));
+            statusItem->setForeground(QColor("#065f46"));
+        } else if (c.status == "En transit") {
+            statusItem->setBackground(QColor("#dbeafe"));
+            statusItem->setForeground(QColor("#1e40af"));
+        } else if (c.status == "Livré") {
+            statusItem->setBackground(QColor("#e0e7ff"));
+            statusItem->setForeground(QColor("#4338ca"));
+        }
+        tableCaptures->setItem(row, 8, statusItem);
+        tableCaptures->setRowHeight(row, 45);
+    }
+
+    mettreAJourStatistiques();
+}
+
+void GestionCaptures::mettreAJourStatistiques()
+{
+    int total = listeCaptures.size();
+    int poisson = 0, crustace = 0, mollusque = 0;
+
+    for (const Capture &c : listeCaptures) {
+        QString type = c.fishType;
+        if (type == "Poisson" || type == "Requin" || type == "Thon" || type == "Saumon" || type == "Bar")
+            poisson++;
+        else if (type == "Crustacé" || type == "Crabe" || type == "Homard" || type == "Crevette")
+            crustace++;
+        else if (type == "Mollusque" || type == "Huître" || type == "Moule")
+            mollusque++;
+    }
+
+    if (labelNbTotal) labelNbTotal->setText(QString::number(total));
+    if (labelNbPoisson) labelNbPoisson->setText(QString::number(poisson));
+    if (labelNbCrustace) labelNbCrustace->setText(QString::number(crustace));
+    if (labelNbMollusque) labelNbMollusque->setText(QString::number(mollusque));
+}
+
+QString GestionCaptures::genererCaptureId()
+{
+    return "CAP-" + QDateTime::currentDateTime().toString("yyyyMMdd-HHmmss-") +
+           QString::number(QRandomGenerator::global()->bounded(1000, 9999));
+}
+
+void GestionCaptures::viderFormulaire()
+{
+    modeModification = false;
+    currentCaptureId.clear();
+
+    editCaptureId->setText(genererCaptureId());
+    editShipName->clear();
+    comboFishType->setCurrentIndex(0);
+    editFishIcon->setText("🐟");
+    spinQuantity->setValue(100);
+    dateCaptureDate->setDate(QDate::currentDate());
+    editTime->setText(QTime::currentTime().toString("HH:mm"));
+    editAgent->clear();
+    comboStatus->setCurrentIndex(0);
+    spinLatitude->setValue(48.8566);
+    spinLongitude->setValue(2.3522);
+    editZone->clear();
+    comboMethod->setCurrentIndex(0);
+    textComments->clear();
+
+    QLabel *titre = pageFormulaire->findChild<QLabel*>("titreFormulaire");
+    if (titre) titre->setText("➕ Ajouter une capture");
+    btnSave->setText("💾 Enregistrer");
+
+    pages->setCurrentWidget(pageFormulaire);
+}
+
+void GestionCaptures::ajouterCapture()
+{
+    if (editShipName->text().trimmed().isEmpty() || editAgent->text().trimmed().isEmpty()) {
+        QMessageBox::warning(this, "Erreur", "Veuillez remplir le nom du navire et de l'agent.");
+        return;
+    }
+
+    Capture c;
+    c.captureId = editCaptureId->text().isEmpty() ? genererCaptureId() : editCaptureId->text();
+    c.shipName = editShipName->text().trimmed();
+    c.fishType = comboFishType->currentText();
+    c.fishIcon = editFishIcon->text().trimmed();
+    c.quantity = spinQuantity->value();
+    c.captureDate = dateCaptureDate->date();
+    c.time = editTime->text().trimmed();
+    c.agent = editAgent->text().trimmed();
+    c.status = comboStatus->currentText();
+    c.latitude = spinLatitude->value();
+    c.longitude = spinLongitude->value();
+    c.zone = editZone->text().trimmed();
+    c.method = comboMethod->currentText();
+    c.comments = textComments->toPlainText().trimmed();
+
+    if (modeModification) {
+        for (int i = 0; i < listeCaptures.size(); i++) {
+            if (listeCaptures[i].captureId == currentCaptureId) {
+                listeCaptures[i] = c;
+                break;
+            }
+        }
+    } else {
+        listeCaptures.append(c);
+    }
+
+    sauvegarderCaptures();
+    QMessageBox::information(this, "Succès", modeModification ? "Capture modifiée !" : "Capture ajoutée !");
+    afficherStatistiques();
+    actualiserTable();
+}
+
+void GestionCaptures::modifierCapture()
+{
+    int row = tableCaptures->currentRow();
+    if (row < 0) {
+        QMessageBox::warning(this, "Attention", "Sélectionnez une capture.");
+        return;
+    }
+
+    QString prefix = tableCaptures->item(row, 0)->text();
+    for (const Capture &c : listeCaptures) {
+        if (c.captureId.startsWith(prefix) || c.captureId.contains(prefix)) {
+            modeModification = true;
+            currentCaptureId = c.captureId;
+
+            editCaptureId->setText(c.captureId);
+            editShipName->setText(c.shipName);
+            comboFishType->setCurrentText(c.fishType);
+            editFishIcon->setText(c.fishIcon);
+            spinQuantity->setValue(c.quantity);
+            dateCaptureDate->setDate(c.captureDate);
+            editTime->setText(c.time);
+            editAgent->setText(c.agent);
+            comboStatus->setCurrentText(c.status);
+            spinLatitude->setValue(c.latitude);
+            spinLongitude->setValue(c.longitude);
+            editZone->setText(c.zone);
+            comboMethod->setCurrentText(c.method);
+            textComments->setText(c.comments);
+
+            QLabel *titre = pageFormulaire->findChild<QLabel*>("titreFormulaire");
+            if (titre) titre->setText("✏️ Modifier une capture");
+            btnSave->setText("✔️ Modifier");
+
+            pages->setCurrentWidget(pageFormulaire);
+            return;
+        }
+    }
+}
+
+void GestionCaptures::supprimerCapture()
+{
+    int row = tableCaptures->currentRow();
+    if (row < 0) {
+        QMessageBox::warning(this, "Attention", "Sélectionnez une capture.");
+        return;
+    }
+
+    QString prefix = tableCaptures->item(row, 0)->text();
+    QString shipName = tableCaptures->item(row, 1)->text();
+
+    if (QMessageBox::question(this, "Confirmation", "Supprimer la capture du navire \"" + shipName + "\" ?") == QMessageBox::Yes) {
+        for (int i = 0; i < listeCaptures.size(); i++) {
+            if (listeCaptures[i].captureId.startsWith(prefix) || listeCaptures[i].captureId.contains(prefix)) {
+                listeCaptures.removeAt(i);
+                break;
+            }
+        }
+        sauvegarderCaptures();
+        actualiserTable();
+        QMessageBox::information(this, "Succès", "Capture supprimée !");
+    }
+}
+
+void GestionCaptures::rechercherCapture(const QString &texte)
+{
+    for (int i = 0; i < tableCaptures->rowCount(); i++) {
+        bool match = false;
+        if (tableCaptures->item(i, 1) && tableCaptures->item(i, 1)->text().contains(texte, Qt::CaseInsensitive))
+            match = true;
+        if (tableCaptures->item(i, 2) && tableCaptures->item(i, 2)->text().contains(texte, Qt::CaseInsensitive))
+            match = true;
+        if (tableCaptures->item(i, 7) && tableCaptures->item(i, 7)->text().contains(texte, Qt::CaseInsensitive))
+            match = true;
+        tableCaptures->setRowHidden(i, !match);
+    }
+}
+
+void GestionCaptures::exporterCSV()
+{
+    if (tableCaptures->rowCount() == 0) return;
+
+    QString fileName = QFileDialog::getSaveFileName(this, "Exporter CSV",
+                                                    QDir::homePath() + "/captures_" + QDate::currentDate().toString("yyyyMMdd") + ".csv",
+                                                    "CSV (*.csv)");
+
+    if (fileName.isEmpty()) return;
+
+    QFile file(fileName);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) return;
+
+    QTextStream out(&file);
+    out.setEncoding(QStringConverter::Utf8);
+
+    for (int col = 0; col < tableCaptures->columnCount(); col++) {
+        out << tableCaptures->horizontalHeaderItem(col)->text();
+        if (col < tableCaptures->columnCount() - 1) out << ",";
+    }
+    out << "\n";
+
+    for (int row = 0; row < tableCaptures->rowCount(); row++) {
+        if (tableCaptures->isRowHidden(row)) continue;
+        for (int col = 0; col < tableCaptures->columnCount(); col++) {
+            QString cell = tableCaptures->item(row, col) ? tableCaptures->item(row, col)->text() : "";
+            if (cell.contains(",")) cell = "\"" + cell + "\"";
+            out << cell;
+            if (col < tableCaptures->columnCount() - 1) out << ",";
+        }
+        out << "\n";
+    }
+
+    file.close();
+    QMessageBox::information(this, "Succès", "Export CSV terminé !");
+}
+
+void GestionCaptures::afficherStatistiques()
+{
+    actualiserTable();
+    pages->setCurrentWidget(pageTableauBord);
+}
+
+void GestionCaptures::appliquerStyles()
+{
+    setStyleSheet(R"(
+        QTableWidget {
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            background-color: white;
+        }
+        QHeaderView::section {
+            background-color: #1e293b;
+            color: white;
+            padding: 12px;
+            border: none;
+            font-weight: 600;
+        }
+    )");
+}
