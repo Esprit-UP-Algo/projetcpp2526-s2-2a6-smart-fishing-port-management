@@ -436,6 +436,13 @@ QGroupBox::title {
          </widget>
         </item>
         <item>
+         <widget class="QPushButton" name="btnCaptures">
+          <property name="text">
+           <string>🐟 Captures</string>
+          </property>
+         </widget>
+        </item>
+        <item>
          <widget class="QPushButton" name="btnEmployees">
           <property name="text">
            <string>👤 Employés</string>
