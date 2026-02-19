@@ -1,23 +1,33 @@
-QT       += core gui charts
+QT       += core gui sql charts
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
-CONFIG += c++17
-
-TARGET = Fishtech
+TARGET = Atelier_Connexion
 TEMPLATE = app
 
-# You can make your code fail to compile if it uses deprecated APIs.
+# The following define makes your compiler emit warnings if you use
+# any feature of Qt which has been marked as deprecated (the exact warnings
+# depend on your compiler). Please consult the documentation of the
+# deprecated API in order to know how to port your code away from it.
+DEFINES += QT_DEPRECATED_WARNINGS
+
+# You can also make your code fail to compile if you use deprecated APIs.
 # In order to do so, uncomment the following line.
+# You can also select to disable deprecated APIs only up to a certain version of Qt.
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
+CONFIG += c++11
+
 SOURCES += \
+    connection.cpp \
     main.cpp \
     mainwindow.cpp \
     addedit_employeedialog.cpp \
     forgotpassworddialog.cpp
 
 HEADERS += \
+    ../../CONNECTION/Atelier_Connexion/connection.h \
+    connection.h \
     mainwindow.h \
     addedit_employeedialog.h \
     forgotpassworddialog.h
@@ -29,3 +39,14 @@ FORMS += \
 qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
+
+# After build, run the built binary in check mode to show a system notification
+win32 {
+    CONFIG(debug, debug|release) {
+        QMAKE_POST_LINK -= debug/$$TARGET.exe --check-db
+        QMAKE_POST_LINK += $$quote(cmd /C \"\"debug\\$$TARGET.exe\" --check-db\")
+    } else:CONFIG(release, debug|release) {
+        QMAKE_POST_LINK -= release/$$TARGET.exe --check-db
+        QMAKE_POST_LINK += $$quote(cmd /C \"\"release\\$$TARGET.exe\" --check-db\")
+    }
+}
