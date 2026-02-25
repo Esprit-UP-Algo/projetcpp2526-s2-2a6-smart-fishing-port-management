@@ -1,4 +1,7 @@
 #include "gestionquai.h"
+#include <QSqlQuery>
+#include <QSqlError>
+#include <QDebug>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 #include <QFormLayout>
@@ -147,7 +150,7 @@ void GestionQuai::configurerInterface()
     mainLayout->setContentsMargins(0, 0, 0, 0);
     mainLayout->setSpacing(0);
 
-    // Barre d'outils
+    // Barre d'outils (match gestionutilisateurs visuals)
     QHBoxLayout *toolbar = new QHBoxLayout;
     toolbar->setContentsMargins(8, 8, 8, 8);
     toolbar->setSpacing(8);
@@ -183,7 +186,7 @@ void GestionQuai::configurerInterface()
 
     QVBoxLayout *frameLayout = new QVBoxLayout(mainFrame);
     frameLayout->addWidget(pages);
-    frameLayout->setContentsMargins(15, 15, 15, 15);
+    frameLayout->setContentsMargins(8, 8, 8, 8);
 
     mainLayout->addWidget(mainFrame);
 
@@ -234,10 +237,10 @@ void GestionQuai::appliquerStyles()
 {
     setStyleSheet(R"(
         QWidget#pageFrame, QFrame#pageFrame { background-color: white; border-radius: 8px; border: 1px solid #e2e8f0; }
-        QPushButton { background-color: #3b82f6; color: white; border-radius: 6px; padding: 8px; font-weight: 600; }
+        QPushButton { background-color: #3b82f6; color: white; border-radius: 6px; padding: 6px; font-weight: 600; }
         QPushButton:hover { background-color: #2563eb; }
         QLineEdit, QSpinBox, QDoubleSpinBox, QComboBox, QTextEdit {
-            padding: 8px;
+            padding: 6px;
             border: 1px solid #cbd5e1;
             border-radius: 6px;
             background-color: white;
@@ -250,7 +253,7 @@ void GestionQuai::appliquerStyles()
         QHeaderView::section {
             background-color: #1e293b;
             color: white;
-            padding: 8px;
+            padding: 6px;
             border: none;
             font-weight: 600;
         }
@@ -357,6 +360,19 @@ void GestionQuai::configurerConsulter()
     connect(sortBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &GestionQuai::trierQuais);
 }
 
+GestionQuai::QuaiStats GestionQuai::getStats() const {
+    GestionQuai::QuaiStats s{0,0};
+    if (tableConsulter) {
+        s.totalQuais = tableConsulter->rowCount();
+        int colNavires = 3; // "Navires présents"
+        for (int i = 0; i < tableConsulter->rowCount(); ++i) {
+            QTableWidgetItem *it = tableConsulter->item(i, colNavires);
+            if (it) s.totalNaviresPresent += it->text().toInt();
+        }
+    }
+    return s;
+}
+
 void GestionQuai::configurerStatistiques()
 {
     QLabel *titre = new QLabel("📊 Statistiques des quais");
@@ -415,6 +431,29 @@ void GestionQuai::configurerProposition()
     mainLayout->setContentsMargins(0, 0, 0, 0);
 
     connect(btnCalculer, &QPushButton::clicked, this, &GestionQuai::trouverMeilleurQuai);
+}
+
+void GestionQuai::loadFromDb()
+{
+    if (!tableConsulter) return;
+    tableConsulter->setRowCount(0);
+    QSqlQuery q;
+    if (!q.exec("SELECT id, nom, places_total, navires_present, adresse, travaux, etat FROM quais")) {
+        qDebug() << "Quais load error:" << q.lastError().text();
+        return;
+    }
+    while (q.next()) {
+        int row = tableConsulter->rowCount();
+        tableConsulter->insertRow(row);
+        tableConsulter->setItem(row, 0, new QTableWidgetItem(q.value(0).toString()));
+        tableConsulter->setItem(row, 1, new QTableWidgetItem(q.value(1).toString()));
+        tableConsulter->setItem(row, 2, new QTableWidgetItem(q.value(2).toString()));
+        tableConsulter->setItem(row, 3, new QTableWidgetItem(q.value(3).toString()));
+        tableConsulter->setItem(row, 4, new QTableWidgetItem(q.value(4).toString()));
+        tableConsulter->setItem(row, 5, new QTableWidgetItem(q.value(5).toString()));
+        tableConsulter->setItem(row, 6, new QTableWidgetItem(q.value(6).toString()));
+    }
+    updateStats();
 }
 
 void GestionQuai::configurerSimulation()

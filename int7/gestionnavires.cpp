@@ -1,4 +1,7 @@
 #include "gestionnavires.h"
+#include <QSqlQuery>
+#include <QSqlError>
+#include <QDebug>
 
 // ============ Navire ============
 Navire::Navire() : nom(""), immatriculation(""), capacite(0), statut("À quai") {}
@@ -143,52 +146,14 @@ void DialogNavire::appliquerStyles()
         QLineEdit, QSpinBox, QComboBox {
             padding: 8px; /* réduit */
             border: 1px solid #cbd5e1;
-            border-radius: 5px; /* réduit */
-            background-color: white;
-        }
-        QLineEdit:focus, QSpinBox:focus, QComboBox:focus {
-            border: 2px solid #3b82f6;
-        }
-        QPushButton {
-            padding: 8px 20px; /* réduit */
-            border-radius: 5px; /* réduit */
             font-weight: 600;
-        }
-        QPushButton#btnEnregistrer {
-            background-color: #3b82f6;
-            color: white;
-            border: none;
-        }
-        QPushButton#btnEnregistrer:hover { background-color: #2563eb; }
-        QPushButton#btnSupprimer {
-            background-color: #ef4444;
-            color: white;
-            border: none;
-        }
-        QPushButton#btnSupprimer:hover { background-color: #dc2626; }
-        QPushButton#btnAnnuler {
             background-color: white;
             color: #475569;
-            border: 1px solid #cbd5e1;
         }
-        QPushButton#btnAnnuler:hover { background-color: #f1f5f9; }
     )");
 }
 
-// ============ GestionNavires ============
 GestionNavires::GestionNavires(QWidget *parent) : QWidget(parent)
-{
-    listeNavires.append(Navire("Transporteur", "2765987658", 291, "À quai"));
-    listeNavires.append(Navire("Neptune", "123456789", 291, "En mer"));
-    listeNavires.append(Navire("Atlantis", "589543217", 291, "En mer"));
-    listeNavires.append(Navire("Falboot", "N-AUTEUR", 291, "Interdit"));
-
-    configurerInterface();
-    chargerNavires();
-    mettreAJourStatistiques();
-}
-
-void GestionNavires::configurerInterface()
 {
     QVBoxLayout *mainLayout = new QVBoxLayout(this);
     mainLayout->setContentsMargins(0, 0, 0, 0);
@@ -248,29 +213,31 @@ void GestionNavires::configurerTableauBord()
 {
     pageTableauBord = new QWidget;
     QVBoxLayout *layout = new QVBoxLayout(pageTableauBord);
-    layout->setContentsMargins(20, 20, 20, 20);
-    layout->setSpacing(15);
+    layout->setContentsMargins(8, 0, 8, 8);
+    layout->setSpacing(0);
 
     QLabel *titre = new QLabel("Tableau de bord des navires");
     titre->setStyleSheet("font-size: 22px; font-weight: bold; color: #1e3a8a;");
 
     QFrame *frameStats = new QFrame;
-    frameStats->setStyleSheet("background-color: white; border-radius: 8px; border: 1px solid #e2e8f0; padding: 15px;");
+    frameStats->setStyleSheet("background-color: white; border-radius: 8px; border: 1px solid #e2e8f0; padding: 8px;");
 
     QVBoxLayout *statsInnerLayout = new QVBoxLayout(frameStats);
+    statsInnerLayout->setContentsMargins(0,0,0,0);
+    statsInnerLayout->setSpacing(4);
 
     QLabel *titreStats = new QLabel("📊 Statistiques des navires");
-    titreStats->setStyleSheet("font-size: 16px; font-weight: bold; color: #1e293b; margin-bottom: 10px;");
+    titreStats->setStyleSheet("font-size: 16px; font-weight: bold; color: #1e293b;");
 
     QHBoxLayout *statsLayout = new QHBoxLayout;
-    statsLayout->setSpacing(10);
+    statsLayout->setSpacing(4);
 
     // compact stat widgets: numeric label (member) + description label
     auto makeStatWidget = [&](QLabel *&valueLabel, const QString &desc, const QString &color) -> QWidget* {
         QWidget *w = new QWidget;
         QVBoxLayout *l = new QVBoxLayout(w);
-        l->setContentsMargins(6,6,6,6);
-        l->setSpacing(4);
+        l->setContentsMargins(4,4,4,4);
+        l->setSpacing(2);
 
         valueLabel = new QLabel("0");
         valueLabel->setAlignment(Qt::AlignCenter);
@@ -283,7 +250,7 @@ void GestionNavires::configurerTableauBord()
         l->addWidget(valueLabel);
         l->addWidget(descLabel);
 
-        w->setStyleSheet("background: #f1f5f9; border-radius: 6px; padding: 6px; border-left: 4px solid #3b82f6;");
+        w->setStyleSheet("background: #f1f5f9; border-radius: 6px; padding: 4px; border-left: 4px solid #3b82f6;");
         return w;
     };
 
@@ -299,8 +266,8 @@ void GestionNavires::configurerTableauBord()
     QHBoxLayout *actionsLayout = new QHBoxLayout;
     lineRecherche = new QLineEdit;
     lineRecherche->setPlaceholderText("🔍 Rechercher par nom ou immatriculation...");
-    lineRecherche->setFixedWidth(250);
-    lineRecherche->setStyleSheet("padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; background: white;");
+    lineRecherche->setFixedWidth(240);
+    lineRecherche->setStyleSheet("padding: 6px; border: 1px solid #cbd5e1; border-radius: 6px; background: white;");
 
     actionsLayout->addWidget(lineRecherche);
     actionsLayout->addStretch();
@@ -328,7 +295,7 @@ void GestionNavires::configurerGestion()
 {
     pageGestion = new QWidget;
     QVBoxLayout *layout = new QVBoxLayout(pageGestion);
-    layout->setContentsMargins(20, 20, 20, 20); // réduit
+    layout->setContentsMargins(8, 8, 8, 8);
     layout->setSpacing(15); // réduit
 
     QLabel *titre = new QLabel("Gestion des navires");
@@ -382,7 +349,7 @@ void GestionNavires::configurerGestion()
     formLayout->addSpacing(3);
     formLayout->addWidget(new QLabel("Statut"));
     formLayout->addWidget(comboStatut);
-    formLayout->addSpacing(10);
+    formLayout->addSpacing(6);
     formLayout->addWidget(btnAjouterNavire);
     formLayout->addStretch();
 
@@ -524,6 +491,17 @@ void GestionNavires::mettreAJourStatistiques()
     if (labelNbInterdit) labelNbInterdit->setText(QString::number(interdit));
 }
 
+GestionNavires::NaviresStats GestionNavires::getStats() const {
+    GestionNavires::NaviresStats s{0,0,0,0};
+    s.total = listeNavires.size();
+    for (const Navire &n : listeNavires) {
+        if (n.getStatut() == "À quai") s.quai++;
+        else if (n.getStatut() == "En mer") s.mer++;
+        else if (n.getStatut() == "Interdit") s.interdit++;
+    }
+    return s;
+}
+
 void GestionNavires::ajouterNavire()
 {
     QString nom = champNom->text().trimmed();
@@ -547,6 +525,25 @@ void GestionNavires::ajouterNavire()
     chargerNavires();
     mettreAJourStatistiques();
     QMessageBox::information(this, "Succès", "Navire ajouté avec succès");
+}
+
+void GestionNavires::loadFromDb()
+{
+    listeNavires.clear();
+    QSqlQuery q;
+    if (!q.exec("SELECT nom, immatriculation, capacite, statut FROM navires")) {
+        qDebug() << "Navires load error:" << q.lastError().text();
+        return;
+    }
+    while (q.next()) {
+        QString nom = q.value(0).toString();
+        QString immat = q.value(1).toString();
+        int cap = q.value(2).toInt();
+        QString stat = q.value(3).toString();
+        listeNavires.append(Navire(nom, immat, cap, stat));
+    }
+    chargerNavires();
+    mettreAJourStatistiques();
 }
 
 void GestionNavires::modifierNavire()

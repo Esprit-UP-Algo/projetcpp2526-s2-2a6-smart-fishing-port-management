@@ -1,4 +1,7 @@
 #include "gestionutilisateurs.h"
+#include <QSqlQuery>
+#include <QSqlError>
+#include <QDebug>
 
 DialogEmploye::DialogEmploye(QWidget *parent, bool isEditMode)
     : QDialog(parent), isEditMode(isEditMode)
@@ -514,6 +517,23 @@ void GestionUtilisateurs::mettreAJourStatistiques()
     statSuperviseur->setText(QString("📋 Superviseur: %1").arg(superviseur));
 }
 
+GestionUtilisateurs::UsersStats GestionUtilisateurs::getStats() const {
+    GestionUtilisateurs::UsersStats s{0,0,0,0,0,0,0.0};
+    s.total = listeEmployes.size();
+    double sum = 0.0;
+    for (const Employe &e : listeEmployes) {
+        QString p = e.poste;
+        if (p == "Pêcheur") s.pecheur++;
+        else if (p == "Matelot") s.matelot++;
+        else if (p == "Docker") s.docker++;
+        else if (p == "Chef de quai") s.chefQuai++;
+        else if (p == "Superviseur") s.superviseur++;
+        sum += e.salaire;
+    }
+    s.avgSalaire = s.total ? (sum / s.total) : 0.0;
+    return s;
+}
+
 void GestionUtilisateurs::mettreAJourStatistiquesSalaires()
 {
     if (listeEmployes.isEmpty()) {
@@ -563,6 +583,29 @@ void GestionUtilisateurs::ajouterEmploye()
         mettreAJourStatistiquesSalaires();
         QMessageBox::information(this, "Succès", "Employé ajouté avec succès !");
     }
+}
+
+void GestionUtilisateurs::loadFromDb()
+{
+    listeEmployes.clear();
+    QSqlQuery q;
+    if (!q.exec("SELECT id, nom, poste, email, telephone, salaire FROM employes")) {
+        qDebug() << "Users load error:" << q.lastError().text();
+        return;
+    }
+    while (q.next()) {
+        Employe e;
+        e.id = q.value(0).toString();
+        e.nom = q.value(1).toString();
+        e.poste = q.value(2).toString();
+        e.email = q.value(3).toString();
+        e.telephone = q.value(4).toString();
+        e.salaire = q.value(5).toDouble();
+        listeEmployes.append(e);
+    }
+    actualiserTable();
+    mettreAJourStatistiques();
+    mettreAJourStatistiquesSalaires();
 }
 
 void GestionUtilisateurs::modifierEmploye()

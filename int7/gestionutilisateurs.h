@@ -125,6 +125,9 @@ class GestionUtilisateurs : public QWidget
 public:
     explicit GestionUtilisateurs(QWidget *parent = nullptr);
     ~GestionUtilisateurs();
+    void loadFromDb();
+    struct UsersStats { int total; int pecheur; int matelot; int docker; int chefQuai; int superviseur; double avgSalaire; };
+    UsersStats getStats() const;
 
 private slots:
     void ajouterEmploye();

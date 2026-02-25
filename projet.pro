@@ -44,6 +44,7 @@ HEADERS += \
     int7/gestionnavires.h \
     int7/gestioncaptures.h \
     int7/gestionutilisateurs.h
+    int7/dashboard.h
 
 FORMS += \
     mainwindow.ui

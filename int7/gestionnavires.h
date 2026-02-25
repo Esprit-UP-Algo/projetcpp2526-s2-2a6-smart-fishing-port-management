@@ -66,7 +66,10 @@ class GestionNavires : public QWidget
 
 public:
     explicit GestionNavires(QWidget *parent = nullptr);
+    void loadFromDb();
     void mettreAJourStatistiques();
+    struct NaviresStats { int total; int quai; int mer; int interdit; };
+    NaviresStats getStats() const;
 
 private slots:
     void ajouterNavire();

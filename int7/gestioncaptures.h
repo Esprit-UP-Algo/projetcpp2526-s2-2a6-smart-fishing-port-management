@@ -98,6 +98,9 @@ class GestionCaptures : public QWidget
 public:
     explicit GestionCaptures(QWidget *parent = nullptr);
     ~GestionCaptures();
+    void loadFromDb();
+    struct CapturesStats { int total; int poisson; int crustace; int mollusque; };
+    CapturesStats getStats() const;
 
 private slots:
     void ajouterCapture();

@@ -1,4 +1,7 @@
 #include "gestioncaptures.h"
+#include <QSqlQuery>
+#include <QSqlError>
+#include <QDebug>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QFormLayout>
@@ -30,10 +33,10 @@ void GestionCaptures::configurerInterface()
     mainLayout->setContentsMargins(0, 0, 0, 0);
     mainLayout->setSpacing(0);
 
-    // Barre d'outils
+    // Barre d'outils (match gestionutilisateurs)
     QHBoxLayout *toolbar = new QHBoxLayout;
-    toolbar->setContentsMargins(8, 8, 8, 8); // réduit
-    toolbar->setSpacing(8); // réduit
+    toolbar->setContentsMargins(8, 8, 8, 8);
+    toolbar->setSpacing(8);
 
     btnAjouter = new QPushButton("➕ Ajouter");
     btnModifier = new QPushButton("✏️ Modifier");
@@ -44,9 +47,9 @@ void GestionCaptures::configurerInterface()
 
     QList<QPushButton*> toolButtons = {btnAjouter, btnModifier, btnSupprimer, btnConsulter, btnExporter, btnActualiser};
     foreach(QPushButton *btn, toolButtons) {
-        btn->setMinimumHeight(35); // réduit
+        btn->setMinimumHeight(35);
         btn->setCursor(Qt::PointingHandCursor);
-        btn->setStyleSheet("background-color: #3b82f6; color: white; border-radius: 5px; padding: 6px 12px; font-weight: bold;"); // réduit
+        btn->setStyleSheet("background-color: #3b82f6; color: white; border-radius: 5px; padding: 6px 12px; font-weight: bold;");
         toolbar->addWidget(btn);
     }
     toolbar->addStretch();
@@ -56,7 +59,7 @@ void GestionCaptures::configurerInterface()
     // Cadre principal
     QWidget *mainFrame = new QWidget;
     mainFrame->setObjectName("pageFrame");
-    mainFrame->setStyleSheet("background: #1e3a8a; border-radius: 8px; margin: 8px;"); // réduit
+    mainFrame->setStyleSheet("background: #1e3a8a; border-radius: 8px; margin: 8px;");
 
     pages = new QStackedWidget(mainFrame);
 
@@ -68,7 +71,7 @@ void GestionCaptures::configurerInterface()
 
     QVBoxLayout *frameLayout = new QVBoxLayout(mainFrame);
     frameLayout->addWidget(pages);
-    frameLayout->setContentsMargins(15, 15, 15, 15); // réduit
+    frameLayout->setContentsMargins(15, 15, 15, 15);
 
     mainLayout->addWidget(mainFrame);
 
@@ -87,29 +90,31 @@ void GestionCaptures::configurerTableauBord()
 {
     pageTableauBord = new QWidget;
     QVBoxLayout *layout = new QVBoxLayout(pageTableauBord);
-    layout->setContentsMargins(20, 20, 20, 20);
-    layout->setSpacing(15);
+        layout->setContentsMargins(8, 0, 8, 8);
+        layout->setSpacing(0);
 
     QLabel *titre = new QLabel("Gestion des captures de poissons");
     titre->setStyleSheet("font-size: 22px; font-weight: bold; color: #1e3a8a;");
 
     QFrame *frameStats = new QFrame;
-    frameStats->setStyleSheet("background-color: white; border-radius: 8px; border: 1px solid #e2e8f0; padding: 15px;");
+    frameStats->setStyleSheet("background-color: white; border-radius: 8px; border: 1px solid #e2e8f0; padding: 8px;");
 
     QVBoxLayout *statsInnerLayout = new QVBoxLayout(frameStats);
+    statsInnerLayout->setContentsMargins(0,0,0,0);
+    statsInnerLayout->setSpacing(4);
 
     QLabel *titreStats = new QLabel("📊 Statistiques des captures");
-    titreStats->setStyleSheet("font-size: 16px; font-weight: bold; color: #1e293b; margin-bottom: 10px;");
+        titreStats->setStyleSheet("font-size: 16px; font-weight: bold; color: #1e293b;");
 
     QHBoxLayout *statsLayout = new QHBoxLayout;
-    statsLayout->setSpacing(10);
+        statsLayout->setSpacing(4);
 
     // compact stat widgets: numeric label (member) + description label
     auto makeStatWidget = [&](QLabel *&valueLabel, const QString &desc, const QString &color) -> QWidget* {
         QWidget *w = new QWidget;
         QVBoxLayout *l = new QVBoxLayout(w);
-        l->setContentsMargins(6,6,6,6);
-        l->setSpacing(4);
+            l->setContentsMargins(4,4,4,4);
+            l->setSpacing(2);
 
         valueLabel = new QLabel("0");
         valueLabel->setAlignment(Qt::AlignCenter);
@@ -122,7 +127,7 @@ void GestionCaptures::configurerTableauBord()
         l->addWidget(valueLabel);
         l->addWidget(descLabel);
 
-        w->setStyleSheet("background: #f1f5f9; border-radius: 6px; padding: 6px; border-left: 4px solid #3b82f6;");
+        w->setStyleSheet("background: #f1f5f9; border-radius: 6px; padding: 4px; border-left: 4px solid #3b82f6;");
         return w;
     };
 
@@ -139,8 +144,8 @@ void GestionCaptures::configurerTableauBord()
 
     lineRecherche = new QLineEdit;
     lineRecherche->setPlaceholderText("🔍 Rechercher par navire, type de poisson ou agent...");
-    lineRecherche->setFixedWidth(300);
-    lineRecherche->setStyleSheet("padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; background: white;");
+        lineRecherche->setFixedWidth(280);
+        lineRecherche->setStyleSheet("padding: 6px; border: 1px solid #cbd5e1; border-radius: 6px; background: white;");
 
     actionsLayout->addWidget(lineRecherche);
     actionsLayout->addStretch();
@@ -168,8 +173,8 @@ void GestionCaptures::configurerFormulaire()
 {
     pageFormulaire = new QWidget;
     QVBoxLayout *layout = new QVBoxLayout(pageFormulaire);
-    layout->setContentsMargins(20, 20, 20, 20); // réduit
-    layout->setSpacing(15); // réduit
+        layout->setContentsMargins(8, 8, 8, 8); // réduit
+        layout->setSpacing(8); // réduit
 
     QLabel *titre = new QLabel("➕ Ajouter une capture");
     titre->setStyleSheet("font-size: 20px; font-weight: bold; color: #1e3a8a;"); // réduit
@@ -179,8 +184,8 @@ void GestionCaptures::configurerFormulaire()
     formFrame->setStyleSheet("background-color: white; border-radius: 8px; border: 1px solid #e2e8f0; padding: 20px;"); // réduit
 
     QGridLayout *formLayout = new QGridLayout(formFrame);
-    formLayout->setHorizontalSpacing(20); // réduit
-    formLayout->setVerticalSpacing(10); // réduit
+        formLayout->setHorizontalSpacing(10); // réduit
+        formLayout->setVerticalSpacing(5); // réduit
 
     editCaptureId = new QLineEdit;
     editCaptureId->setVisible(false);
@@ -279,7 +284,7 @@ void GestionCaptures::configurerFormulaire()
     btnCancel->setMinimumHeight(40);
     btnSave->setCursor(Qt::PointingHandCursor);
     btnCancel->setCursor(Qt::PointingHandCursor);
-    btnSave->setStyleSheet("background-color: #3b82f6; color: white; font-weight: bold; font-size: 14px; padding: 8px; border-radius: 6px;"); // réduit
+        btnSave->setStyleSheet("background-color: #3b82f6; color: white; font-weight: bold; font-size: 14px; padding: 6px; border-radius: 6px;"); // réduit
     btnCancel->setStyleSheet("background-color: #ef4444; color: white; font-weight: bold; font-size: 14px; padding: 8px; border-radius: 6px;");
 
     btnLayout->addStretch();
@@ -452,12 +457,12 @@ void GestionCaptures::mettreAJourStatistiques()
     int poisson = 0, crustace = 0, mollusque = 0;
 
     for (const Capture &c : listeCaptures) {
-        QString type = c.fishType;
-        if (type == "Poisson" || type == "Requin" || type == "Thon" || type == "Saumon" || type == "Bar")
+        QString type = c.fishType.toLower();
+        if (type == "poisson")
             poisson++;
-        else if (type == "Crustacé" || type == "Crabe" || type == "Homard" || type == "Crevette")
+        else if (type == "crustace")
             crustace++;
-        else if (type == "Mollusque" || type == "Huître" || type == "Moule")
+        else if (type == "mollusque")
             mollusque++;
     }
 
@@ -465,6 +470,18 @@ void GestionCaptures::mettreAJourStatistiques()
     if (labelNbPoisson) labelNbPoisson->setText(QString::number(poisson));
     if (labelNbCrustace) labelNbCrustace->setText(QString::number(crustace));
     if (labelNbMollusque) labelNbMollusque->setText(QString::number(mollusque));
+}
+
+GestionCaptures::CapturesStats GestionCaptures::getStats() const {
+    GestionCaptures::CapturesStats s{0,0,0,0};
+    s.total = listeCaptures.size();
+    for (const Capture &c : listeCaptures) {
+        QString type = c.fishType.toLower();
+        if (type == "poisson") s.poisson++;
+        else if (type == "crustace") s.crustace++;
+        else if (type == "mollusque") s.mollusque++;
+    }
+    return s;
 }
 
 QString GestionCaptures::genererCaptureId()
@@ -538,6 +555,28 @@ void GestionCaptures::ajouterCapture()
     QMessageBox::information(this, "Succès", modeModification ? "Capture modifiée !" : "Capture ajoutée !");
     afficherStatistiques();
     actualiserTable();
+}
+
+void GestionCaptures::loadFromDb()
+{
+    listeCaptures.clear();
+    QSqlQuery q;
+    if (!q.exec("SELECT captureId, shipName, fishType, quantity, captureDate, agent FROM captures")) {
+        qDebug() << "Captures load error:" << q.lastError().text();
+        return;
+    }
+    while (q.next()) {
+        Capture c;
+        c.captureId = q.value(0).toString();
+        c.shipName = q.value(1).toString();
+        c.fishType = q.value(2).toString();
+        c.quantity = q.value(3).toInt();
+        c.captureDate = q.value(4).toDate();
+        c.agent = q.value(5).toString();
+        listeCaptures.append(c);
+    }
+    actualiserTable();
+    mettreAJourStatistiques();
 }
 
 void GestionCaptures::modifierCapture()

@@ -78,6 +78,9 @@ class GestionQuai : public QWidget
 
 public:
     explicit GestionQuai(QWidget *parent = nullptr);
+    void loadFromDb();
+    struct QuaiStats { int totalQuais; int totalNaviresPresent; };
+    QuaiStats getStats() const;
 
 private slots:
     void showAjouter();

@@ -29,9 +29,13 @@
 #include <QFileDialog>
 #include <QDateTime>
 #include <QPageSize>
+#include <QSqlQuery>
+#include <QSqlError>
+#include <QSqlDatabase>
 #include "int7/gestionquai.h"
 #include "int7/gestionnavires.h"
 #include "int7/gestioncaptures.h"
+#include "connection.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -145,6 +149,7 @@ void MainWindow::setupConnections()
     connect(ui->btnQuais, &QPushButton::clicked, this, &MainWindow::onShowQuais);
     connect(ui->btnShips, &QPushButton::clicked, this, &MainWindow::onShowShips);
     connect(ui->btnCaptures, &QPushButton::clicked, this, &MainWindow::onShowCaptures);
+    connect(ui->btnDashboard, &QPushButton::clicked, this, &MainWindow::onShowDashboard);
     connect(ui->btnEmployees, &QPushButton::clicked, this, &MainWindow::onShowEmployeesContent);
 }
 
@@ -189,6 +194,39 @@ void MainWindow::onShowQuais()
     ui->labelTitle->setText("Gestion des Quais");
 }
 
+void MainWindow::onShowDashboard()
+{
+    Connection conn;
+    if (!conn.createconnect()) {
+        QMessageBox::warning(this, "DB Connection", "Unable to connect to database (check DSN/credentials).");
+        return;
+    }
+    if (!quaiWidget) quaiWidget = new GestionQuai(this);
+    if (!navireWidget) navireWidget = new GestionNavires(this);
+    if (!captureWidget) captureWidget = new GestionCaptures(this);
+    if (!utilWidget) utilWidget = new GestionUtilisateurs(this);
+    // load latest data from DB into each gestion
+    utilWidget->loadFromDb();
+    navireWidget->loadFromDb();
+    captureWidget->loadFromDb();
+    quaiWidget->loadFromDb();
+
+    if (!dashboardWidget) {
+        dashboardWidget = new Dashboard(quaiWidget, navireWidget, captureWidget, utilWidget);
+    }
+    if (currentModuleWidget == dashboardWidget) return;
+    if (currentModuleWidget) {
+        ui->contentLayout->removeWidget(currentModuleWidget);
+        currentModuleWidget->hide();
+    }
+    hideEmployeeControls(ui);
+    dashboardWidget->refresh();
+    ui->contentLayout->addWidget(dashboardWidget);
+    dashboardWidget->show();
+    currentModuleWidget = dashboardWidget;
+    ui->labelTitle->setText("Tableau de bord");
+}
+
 void MainWindow::onShowShips()
 {
     if (!navireWidget) navireWidget = new GestionNavires(this);
@@ -228,6 +266,7 @@ void MainWindow::onShowEmployeesContent()
     }
     showEmployeeControls(ui);
     ui->labelTitle->setText("Employees");
+    loadEmployeesFromDb();
     updateEmployeeStats();
     updateSalaryStats();
 }
@@ -257,8 +296,9 @@ void MainWindow::onLoginClicked()
         return;
     }
     
-    QMessageBox::information(this, "Success", "Login successful!");
+    // After successful login, go directly to the Employees page and show the Dashboard
     showEmployeesPage();
+    onShowDashboard();
 }
 
 void MainWindow::onForgotPasswordClicked()
@@ -390,6 +430,97 @@ void MainWindow::onSearchEmployees(const QString &text)
         }
         table->setRowHidden(i, !match);
     }
+}
+
+void MainWindow::loadEmployeesFromDb()
+{
+    QTableWidget* table = ui->tableEmployees;
+    if (!table) return;
+    
+    // Open database connection
+    Connection conn;
+    if (!conn.createconnect()) {
+        qDebug() << "Failed to connect to database for employee loading";
+        return;
+    }
+    
+    // Clear existing rows
+    table->setRowCount(0);
+    
+    // Execute SQL query to fetch employees
+    QSqlQuery query;
+    if (!query.exec("SELECT id, nom, poste, email, telephone, salaire FROM employes ORDER BY id")) {
+        qDebug() << "Error loading employees:" << query.lastError().text();
+        return;
+    }
+    
+    // Populate table from database results
+    int rowCount = 0;
+    while (query.next()) {
+        table->insertRow(rowCount);
+        
+        int id = query.value(0).toInt();
+        QString nom = query.value(1).toString();
+        QString poste = query.value(2).toString();
+        QString email = query.value(3).toString();
+        QString telephone = query.value(4).toString();
+        double salaire = query.value(5).toDouble();
+        
+        table->setItem(rowCount, 0, new QTableWidgetItem(QString::number(id)));
+        table->setItem(rowCount, 1, new QTableWidgetItem(nom));
+        table->setItem(rowCount, 2, new QTableWidgetItem(poste));
+        table->setItem(rowCount, 3, new QTableWidgetItem(email));
+        table->setItem(rowCount, 4, new QTableWidgetItem(telephone));
+        table->setItem(rowCount, 5, new QTableWidgetItem(QString::number(salaire, 'f', 2) + " TND"));
+        
+        // Add Edit button
+        QPushButton* btnEdit = new QPushButton("✏️");
+        btnEdit->setToolTip("Edit");
+        btnEdit->setStyleSheet(
+            "QPushButton { "
+            "background-color: #2196F3; "
+            "color: white; "
+            "border: none; "
+            "border-radius: 5px; "
+            "padding: 5px 10px; "
+            "font-weight: bold; "
+            "} "
+            "QPushButton:hover { "
+            "background-color: #1976D2; "
+            "} "
+            "QPushButton:pressed { "
+            "background-color: #1565C0; "
+            "}"
+        );
+        connect(btnEdit, &QPushButton::clicked, [this, rowCount]() { onEditEmployeeClicked(rowCount); });
+        table->setCellWidget(rowCount, 6, btnEdit);
+        
+        // Add Delete button
+        QPushButton* btnDelete = new QPushButton("🗑️");
+        btnDelete->setToolTip("Delete");
+        btnDelete->setStyleSheet(
+            "QPushButton { "
+            "background-color: #F44336; "
+            "color: white; "
+            "border: none; "
+            "border-radius: 5px; "
+            "padding: 5px 10px; "
+            "font-weight: bold; "
+            "} "
+            "QPushButton:hover { "
+            "background-color: #DA190B; "
+            "} "
+            "QPushButton:pressed { "
+            "background-color: #BA0000; "
+            "}"
+        );
+        connect(btnDelete, &QPushButton::clicked, [this, rowCount]() { onDeleteEmployeeClicked(rowCount); });
+        table->setCellWidget(rowCount, 7, btnDelete);
+        
+        rowCount++;
+    }
+    
+    qDebug() << "Loaded" << rowCount << "employees from database";
 }
 
 void MainWindow::updateEmployeeStats()

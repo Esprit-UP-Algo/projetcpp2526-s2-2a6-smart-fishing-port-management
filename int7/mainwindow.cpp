@@ -3,6 +3,7 @@
 #include "gestionnavires.h"
 #include "gestioncaptures.h"
 #include "gestionutilisateurs.h"
+#include "dashboard.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QFormLayout>
@@ -97,12 +98,15 @@ void MainWindow::setupMainInterface()
     title->setStyleSheet("color: white; font-size: 20px; font-weight: bold; padding: 15px 5px; background-color: #1e3a8a; border-radius: 8px; margin: 8px;");
 
     btnQuais = new QPushButton("🏗️ Quais");
+    btnDashboard = new QPushButton("📊 Tableau de bord");
     btnNavires = new QPushButton("🚢 Navires");
     btnCaptures = new QPushButton("🎣 Captures");
     btnUtilisateurs = new QPushButton("👥 Utilisateurs");
     btnLogout = new QPushButton("🚪 Déconnexion");
 
     QList<QPushButton*> menuButtons = {btnQuais, btnNavires, btnCaptures, btnUtilisateurs, btnLogout};
+    // insert dashboard as second item visually
+    menuButtons.insert(1, btnDashboard);
     foreach(QPushButton *btn, menuButtons) {
         btn->setObjectName("btnMenuPrincipal");
         btn->setMinimumHeight(38);
@@ -115,6 +119,7 @@ void MainWindow::setupMainInterface()
     menuLayout->addWidget(title);
     menuLayout->addSpacing(10);
     menuLayout->addWidget(btnQuais);
+    menuLayout->addWidget(btnDashboard);
     menuLayout->addWidget(btnNavires);
     menuLayout->addWidget(btnCaptures);
     menuLayout->addWidget(btnUtilisateurs);
@@ -133,8 +138,10 @@ void MainWindow::setupMainInterface()
     gestionNaviresWidget = new GestionNavires;
     gestionCapturesWidget = new GestionCaptures;
     gestionUtilisateursWidget = new GestionUtilisateurs;
+    dashboardWidget = new Dashboard(gestionQuaiWidget, gestionNaviresWidget, gestionCapturesWidget, gestionUtilisateursWidget);
 
     contentStack->addWidget(gestionQuaiWidget);        // index 0
+    contentStack->addWidget(dashboardWidget);          // index 1
     contentStack->addWidget(gestionNaviresWidget);     // index 1
     contentStack->addWidget(gestionCapturesWidget);    // index 2
     contentStack->addWidget(gestionUtilisateursWidget);// index 3
@@ -147,6 +154,7 @@ void MainWindow::setupMainInterface()
     rootLayout->addWidget(contentArea);
 
     connect(btnQuais, &QPushButton::clicked, this, &MainWindow::showGestionQuais);
+    connect(btnDashboard, &QPushButton::clicked, this, &MainWindow::showDashboard);
     connect(btnNavires, &QPushButton::clicked, this, &MainWindow::showGestionNavires);
     connect(btnCaptures, &QPushButton::clicked, this, &MainWindow::showGestionCaptures);
     connect(btnUtilisateurs, &QPushButton::clicked, this, &MainWindow::showGestionUtilisateurs);
@@ -157,7 +165,19 @@ void MainWindow::setupMainInterface()
 
 void MainWindow::onLoginClicked()
 {
-    stackedLayout->setCurrentIndex(1);
+    QString username = userEdit->text().trimmed();
+    QString password = passEdit->text().trimmed();
+    
+    if (username.isEmpty() || password.isEmpty()) {
+        QMessageBox::warning(this, "Erreur", "Veuillez entrer un nom d'utilisateur et un mot de passe");
+        return;
+    }
+    
+    if (username == "0" && password == "0") {
+        stackedLayout->setCurrentIndex(1);
+    } else {
+        QMessageBox::warning(this, "Erreur", "Nom d'utilisateur ou mot de passe incorrect");
+    }
 }
 
 void MainWindow::onLogoutClicked()
@@ -170,6 +190,14 @@ void MainWindow::onLogoutClicked()
 void MainWindow::showGestionQuais()
 {
     contentStack->setCurrentIndex(0);
+}
+
+void MainWindow::showDashboard()
+{
+    // refresh dashboard then show
+    if (dashboardWidget) dashboardWidget->refresh();
+    // dashboard is at index 1
+    contentStack->setCurrentWidget(dashboardWidget);
 }
 
 void MainWindow::showGestionNavires()

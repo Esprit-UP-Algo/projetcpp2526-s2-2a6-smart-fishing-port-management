@@ -6,6 +6,8 @@
 #include "int7/gestionquai.h"
 #include "int7/gestionnavires.h"
 #include "int7/gestioncaptures.h"
+#include "int7/dashboard.h"
+#include "int7/gestionutilisateurs.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -32,6 +34,7 @@ public:
 private slots:
     void onLoginClicked();
     void onForgotPasswordClicked();
+    void onShowDashboard();
 
     void onLogoutClicked();
     void onAddEmployeeClicked();
@@ -50,6 +53,7 @@ private slots:
 private:
     void setupConnections();
     void setupTableEmployees();
+    void loadEmployeesFromDb();
     void updateEmployeeStats();
     void updateSalaryStats();
     void generateAnalyticsPDF();
@@ -62,6 +66,8 @@ private:
     GestionQuai *quaiWidget = nullptr;
     GestionNavires *navireWidget = nullptr;
     GestionCaptures *captureWidget = nullptr;
+    GestionUtilisateurs *utilWidget = nullptr;
+    Dashboard *dashboardWidget = nullptr;
     QWidget *currentModuleWidget = nullptr;
 };
 #endif

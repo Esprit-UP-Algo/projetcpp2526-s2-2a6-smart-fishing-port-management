@@ -25,6 +25,7 @@ private slots:
     void onLoginClicked();
     void onLogoutClicked();
     void showGestionQuais();
+    void showDashboard();
     void showGestionNavires();
     void showGestionCaptures();
     void showGestionUtilisateurs();
@@ -39,6 +40,7 @@ private:
 
     QWidget *menuWidget;
     QPushButton *btnQuais;
+    QPushButton *btnDashboard;
     QPushButton *btnNavires;
     QPushButton *btnCaptures;
     QPushButton *btnUtilisateurs;
@@ -47,6 +49,7 @@ private:
     QStackedWidget *contentStack;
 
     GestionQuai *gestionQuaiWidget;
+    class Dashboard* dashboardWidget;
     GestionNavires *gestionNaviresWidget;
     GestionCaptures *gestionCapturesWidget;
     GestionUtilisateurs *gestionUtilisateursWidget;
