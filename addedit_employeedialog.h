@@ -33,6 +33,9 @@ private:
     QLineEdit *lineTelephone;
     QLineEdit *lineSalaire;
     bool isEditMode;
+    bool isValidEmail(const QString &email) const;
+    bool isValidPhone(const QString &phone) const;
+    bool isValidSalary(const QString &salary, double &outValue) const;
 };
 
 #endif

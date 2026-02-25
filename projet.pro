@@ -2,7 +2,7 @@ QT       += core gui sql charts
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
-TARGET = Atelier_Connexion
+TARGET = projet
 TEMPLATE = app
 
 # The following define makes your compiler emit warnings if you use
@@ -52,14 +52,3 @@ FORMS += \
 qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
-
-# After build, run the built binary in check mode to show a system notification
-win32 {
-    CONFIG(debug, debug|release) {
-        QMAKE_POST_LINK -= debug/$$TARGET.exe --check-db
-        QMAKE_POST_LINK += $$quote(cmd /C \"\"debug\\$$TARGET.exe\" --check-db\")
-    } else:CONFIG(release, debug|release) {
-        QMAKE_POST_LINK -= release/$$TARGET.exe --check-db
-        QMAKE_POST_LINK += $$quote(cmd /C \"\"release\\$$TARGET.exe\" --check-db\")
-    }
-}

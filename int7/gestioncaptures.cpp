@@ -87,63 +87,49 @@ void GestionCaptures::configurerTableauBord()
 {
     pageTableauBord = new QWidget;
     QVBoxLayout *layout = new QVBoxLayout(pageTableauBord);
-    layout->setContentsMargins(20, 20, 20, 20); // réduit
-    layout->setSpacing(15); // réduit
+    layout->setContentsMargins(20, 20, 20, 20);
+    layout->setSpacing(15);
 
     QLabel *titre = new QLabel("Gestion des captures de poissons");
-    titre->setStyleSheet("font-size: 20px; font-weight: bold; color: #1e3a8a;"); // réduit
+    titre->setStyleSheet("font-size: 22px; font-weight: bold; color: #1e3a8a;");
 
-    QHBoxLayout *cartesLayout = new QHBoxLayout;
-    cartesLayout->setSpacing(15); // réduit
+    QFrame *frameStats = new QFrame;
+    frameStats->setStyleSheet("background-color: white; border-radius: 8px; border: 1px solid #e2e8f0; padding: 15px;");
 
-    QFrame *carteTotal = new QFrame;
-    carteTotal->setStyleSheet("background-color: white; border-radius: 8px; border: 1px solid #e2e8f0; padding: 15px;"); // réduit
-    carteTotal->setMinimumHeight(80);
-    QVBoxLayout *layoutTotal = new QVBoxLayout(carteTotal);
-    layoutTotal->addWidget(new QLabel("📊"), 0, Qt::AlignCenter);
-    labelNbTotal = new QLabel("0");
-    labelNbTotal->setStyleSheet("font-size: 28px; font-weight: bold; color: #1e3a8a;"); // réduit
-    layoutTotal->addWidget(labelNbTotal, 0, Qt::AlignCenter);
-    layoutTotal->addWidget(new QLabel("Total captures"), 0, Qt::AlignCenter);
+    QVBoxLayout *statsInnerLayout = new QVBoxLayout(frameStats);
 
-    QFrame *cartePoisson = new QFrame;
-    cartePoisson->setStyleSheet("background-color: white; border-radius: 8px; border: 1px solid #e2e8f0; padding: 15px;");
-    QVBoxLayout *layoutPoisson = new QVBoxLayout(cartePoisson);
-    layoutPoisson->addWidget(new QLabel("🐟"), 0, Qt::AlignCenter);
-    labelNbPoisson = new QLabel("0");
-    labelNbPoisson->setStyleSheet("font-size: 28px; font-weight: bold; color: #0891b2;");
-    layoutPoisson->addWidget(labelNbPoisson, 0, Qt::AlignCenter);
-    layoutPoisson->addWidget(new QLabel("Poissons"), 0, Qt::AlignCenter);
+    QLabel *titreStats = new QLabel("📊 Statistiques des captures");
+    titreStats->setStyleSheet("font-size: 16px; font-weight: bold; color: #1e293b; margin-bottom: 10px;");
 
-    QFrame *carteCrustace = new QFrame;
-    carteCrustace->setStyleSheet("background-color: white; border-radius: 8px; border: 1px solid #e2e8f0; padding: 15px;");
-    QVBoxLayout *layoutCrustace = new QVBoxLayout(carteCrustace);
-    layoutCrustace->addWidget(new QLabel("🦐"), 0, Qt::AlignCenter);
-    labelNbCrustace = new QLabel("0");
-    labelNbCrustace->setStyleSheet("font-size: 28px; font-weight: bold; color: #f59e0b;");
-    layoutCrustace->addWidget(labelNbCrustace, 0, Qt::AlignCenter);
-    layoutCrustace->addWidget(new QLabel("Crustacés"), 0, Qt::AlignCenter);
+    QHBoxLayout *statsLayout = new QHBoxLayout;
+    statsLayout->setSpacing(10);
 
-    QFrame *carteMollusque = new QFrame;
-    carteMollusque->setStyleSheet("background-color: white; border-radius: 8px; border: 1px solid #e2e8f0; padding: 15px;");
-    QVBoxLayout *layoutMollusque = new QVBoxLayout(carteMollusque);
-    layoutMollusque->addWidget(new QLabel("🐚"), 0, Qt::AlignCenter);
-    labelNbMollusque = new QLabel("0");
-    labelNbMollusque->setStyleSheet("font-size: 28px; font-weight: bold; color: #10b981;");
-    layoutMollusque->addWidget(labelNbMollusque, 0, Qt::AlignCenter);
-    layoutMollusque->addWidget(new QLabel("Mollusques"), 0, Qt::AlignCenter);
+    labelNbTotal = new QLabel("📊 Total: 0");
+    labelNbPoisson = new QLabel("🐟 Poissons: 0");
+    labelNbCrustace = new QLabel("🦐 Crustacés: 0");
+    labelNbMollusque = new QLabel("🐚 Mollusques: 0");
 
-    cartesLayout->addWidget(carteTotal);
-    cartesLayout->addWidget(cartePoisson);
-    cartesLayout->addWidget(carteCrustace);
-    cartesLayout->addWidget(carteMollusque);
+    QString statStyle = "font-size: 13px; font-weight: bold; color: #1e3a8a; padding: 8px; background: #f1f5f9; border-radius: 6px; border-left: 4px solid #3b82f6;";
+    labelNbTotal->setStyleSheet(statStyle);
+    labelNbPoisson->setStyleSheet(statStyle);
+    labelNbCrustace->setStyleSheet(statStyle);
+    labelNbMollusque->setStyleSheet(statStyle);
+
+    statsLayout->addWidget(labelNbTotal);
+    statsLayout->addWidget(labelNbPoisson);
+    statsLayout->addWidget(labelNbCrustace);
+    statsLayout->addWidget(labelNbMollusque);
+    statsLayout->addStretch();
+
+    statsInnerLayout->addWidget(titreStats);
+    statsInnerLayout->addLayout(statsLayout);
 
     QHBoxLayout *actionsLayout = new QHBoxLayout;
 
     lineRecherche = new QLineEdit;
     lineRecherche->setPlaceholderText("🔍 Rechercher par navire, type de poisson ou agent...");
-    lineRecherche->setFixedWidth(300); // réduit
-    lineRecherche->setStyleSheet("padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; background: white;"); // réduit
+    lineRecherche->setFixedWidth(300);
+    lineRecherche->setStyleSheet("padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; background: white;");
 
     actionsLayout->addWidget(lineRecherche);
     actionsLayout->addStretch();
@@ -156,11 +142,11 @@ void GestionCaptures::configurerTableauBord()
     tableCaptures->setSelectionBehavior(QAbstractItemView::SelectRows);
     tableCaptures->setEditTriggers(QAbstractItemView::NoEditTriggers);
     tableCaptures->verticalHeader()->setVisible(false);
-    tableCaptures->setMinimumHeight(250); // réduit
-    tableCaptures->setStyleSheet("background: white; border: 1px solid #e2e8f0; border-radius: 6px;"); // réduit
+    tableCaptures->setMinimumHeight(250);
+    tableCaptures->setStyleSheet("background: white; border: 1px solid #e2e8f0; border-radius: 6px;");
 
     layout->addWidget(titre);
-    layout->addLayout(cartesLayout);
+    layout->addWidget(frameStats);
     layout->addLayout(actionsLayout);
     layout->addWidget(tableCaptures);
 

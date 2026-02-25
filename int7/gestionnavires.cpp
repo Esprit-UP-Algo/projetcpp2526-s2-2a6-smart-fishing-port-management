@@ -248,35 +248,48 @@ void GestionNavires::configurerTableauBord()
 {
     pageTableauBord = new QWidget;
     QVBoxLayout *layout = new QVBoxLayout(pageTableauBord);
-    layout->setContentsMargins(20, 20, 20, 20); // réduit
-    layout->setSpacing(15); // réduit
+    layout->setContentsMargins(20, 20, 20, 20);
+    layout->setSpacing(15);
 
     QLabel *titre = new QLabel("Tableau de bord des navires");
-    titre->setStyleSheet("font-size: 20px; font-weight: bold; color: #1e3a8a;"); // réduit
+    titre->setStyleSheet("font-size: 22px; font-weight: bold; color: #1e3a8a;");
 
-    QHBoxLayout *cartesLayout = new QHBoxLayout;
-    cartesLayout->setSpacing(15); // réduit
+    QFrame *frameStats = new QFrame;
+    frameStats->setStyleSheet("background-color: white; border-radius: 8px; border: 1px solid #e2e8f0; padding: 15px;");
 
-    QFrame *carteTotal = creerCarteStatistique("Total navires", "0", "🚢", "#1e3a8a");
-    QFrame *carteQuai = creerCarteStatistique("À quai", "0", "⚓", "#f59e0b");
-    QFrame *carteMer = creerCarteStatistique("En mer", "0", "🌊", "#10b981");
-    QFrame *carteInterdit = creerCarteStatistique("Interdits", "0", "⛔", "#ef4444");
+    QVBoxLayout *statsInnerLayout = new QVBoxLayout(frameStats);
 
-    labelNbTotal = carteTotal->findChild<QLabel*>("valeurStat");
-    labelNbQuai = carteQuai->findChild<QLabel*>("valeurStat");
-    labelNbMer = carteMer->findChild<QLabel*>("valeurStat");
-    labelNbInterdit = carteInterdit->findChild<QLabel*>("valeurStat");
+    QLabel *titreStats = new QLabel("📊 Statistiques des navires");
+    titreStats->setStyleSheet("font-size: 16px; font-weight: bold; color: #1e293b; margin-bottom: 10px;");
 
-    cartesLayout->addWidget(carteTotal);
-    cartesLayout->addWidget(carteQuai);
-    cartesLayout->addWidget(carteMer);
-    cartesLayout->addWidget(carteInterdit);
+    QHBoxLayout *statsLayout = new QHBoxLayout;
+    statsLayout->setSpacing(10);
+
+    labelNbTotal = new QLabel("🚢 Total: 0");
+    labelNbQuai = new QLabel("⚓ À quai: 0");
+    labelNbMer = new QLabel("🌊 En mer: 0");
+    labelNbInterdit = new QLabel("⛔ Interdits: 0");
+
+    QString statStyle = "font-size: 13px; font-weight: bold; color: #1e3a8a; padding: 8px; background: #f1f5f9; border-radius: 6px; border-left: 4px solid #3b82f6;";
+    labelNbTotal->setStyleSheet(statStyle);
+    labelNbQuai->setStyleSheet(statStyle);
+    labelNbMer->setStyleSheet(statStyle);
+    labelNbInterdit->setStyleSheet(statStyle);
+
+    statsLayout->addWidget(labelNbTotal);
+    statsLayout->addWidget(labelNbQuai);
+    statsLayout->addWidget(labelNbMer);
+    statsLayout->addWidget(labelNbInterdit);
+    statsLayout->addStretch();
+
+    statsInnerLayout->addWidget(titreStats);
+    statsInnerLayout->addLayout(statsLayout);
 
     QHBoxLayout *actionsLayout = new QHBoxLayout;
     lineRecherche = new QLineEdit;
     lineRecherche->setPlaceholderText("🔍 Rechercher par nom ou immatriculation...");
-    lineRecherche->setFixedWidth(250); // réduit
-    lineRecherche->setStyleSheet("padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; background: white;"); // réduit
+    lineRecherche->setFixedWidth(250);
+    lineRecherche->setStyleSheet("padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; background: white;");
 
     actionsLayout->addWidget(lineRecherche);
     actionsLayout->addStretch();
@@ -388,34 +401,7 @@ void GestionNavires::configurerGestion()
     connect(btnAjouterNavire, &QPushButton::clicked, this, &GestionNavires::ajouterNavire);
 }
 
-QFrame* GestionNavires::creerCarteStatistique(QString titre, QString valeur, QString icone, QString couleur)
-{
-    QFrame *carte = new QFrame;
-    carte->setStyleSheet("QFrame { background-color: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; }"); // réduit
-    carte->setMinimumHeight(80);
 
-    QVBoxLayout *layout = new QVBoxLayout(carte);
-    layout->setSpacing(8); // réduit
-
-    QLabel *iconLabel = new QLabel(icone);
-    iconLabel->setStyleSheet("font-size: 28px;"); // réduit
-    iconLabel->setAlignment(Qt::AlignCenter);
-
-    QLabel *valLabel = new QLabel(valeur);
-    valLabel->setObjectName("valeurStat");
-    valLabel->setStyleSheet(QString("font-size: 28px; font-weight: bold; color: %1;").arg(couleur)); // réduit
-    valLabel->setAlignment(Qt::AlignCenter);
-
-    QLabel *titreLabel = new QLabel(titre);
-    titreLabel->setStyleSheet("font-size: 13px; color: #64748b; font-weight: 600;"); // réduit
-    titreLabel->setAlignment(Qt::AlignCenter);
-
-    layout->addWidget(iconLabel);
-    layout->addWidget(valLabel);
-    layout->addWidget(titreLabel);
-
-    return carte;
-}
 
 void GestionNavires::chargerNavires()
 {

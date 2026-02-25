@@ -3,6 +3,9 @@
 
 #include <QMainWindow>
 #include "addedit_employeedialog.h"
+#include "int7/gestionquai.h"
+#include "int7/gestionnavires.h"
+#include "int7/gestioncaptures.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -39,6 +42,10 @@ private slots:
 
     void onSortByPositionClicked();
     void onSortBySalaryClicked();
+    void onShowQuais();
+    void onShowShips();
+    void onShowCaptures();
+    void onShowEmployeesContent();
 
 private:
     void setupConnections();
@@ -52,5 +59,9 @@ private:
     void* analyticsBarChart = nullptr;
 
     Ui::MainWindow *ui;
+    GestionQuai *quaiWidget = nullptr;
+    GestionNavires *navireWidget = nullptr;
+    GestionCaptures *captureWidget = nullptr;
+    QWidget *currentModuleWidget = nullptr;
 };
 #endif

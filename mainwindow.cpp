@@ -29,6 +29,9 @@
 #include <QFileDialog>
 #include <QDateTime>
 #include <QPageSize>
+#include "int7/gestionquai.h"
+#include "int7/gestionnavires.h"
+#include "int7/gestioncaptures.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -139,6 +142,94 @@ void MainWindow::setupConnections()
     connect(ui->btnSortByPosition, &QPushButton::clicked, this, &MainWindow::onSortByPositionClicked);
     connect(ui->btnSortBySalary, &QPushButton::clicked, this, &MainWindow::onSortBySalaryClicked);
     connect(ui->btnAnalytics, &QPushButton::clicked, this, &MainWindow::onShowAnalytics);
+    connect(ui->btnQuais, &QPushButton::clicked, this, &MainWindow::onShowQuais);
+    connect(ui->btnShips, &QPushButton::clicked, this, &MainWindow::onShowShips);
+    connect(ui->btnCaptures, &QPushButton::clicked, this, &MainWindow::onShowCaptures);
+    connect(ui->btnEmployees, &QPushButton::clicked, this, &MainWindow::onShowEmployeesContent);
+}
+
+// Helper to hide employee-specific controls
+static void hideEmployeeControls(Ui::MainWindow *ui)
+{
+    ui->statsBox->hide();
+    ui->salaryStatsBox->hide();
+    ui->tableEmployees->hide();
+    ui->btnSortByPosition->hide();
+    ui->btnSortBySalary->hide();
+    ui->btnAnalytics->hide();
+    ui->btnAdd->hide();
+    ui->lineSearch->hide();
+}
+
+// Helper to show employee-specific controls
+static void showEmployeeControls(Ui::MainWindow *ui)
+{
+    ui->statsBox->show();
+    ui->salaryStatsBox->show();
+    ui->tableEmployees->show();
+    ui->btnSortByPosition->show();
+    ui->btnSortBySalary->show();
+    ui->btnAnalytics->show();
+    ui->btnAdd->show();
+    ui->lineSearch->show();
+}
+
+void MainWindow::onShowQuais()
+{
+    if (!quaiWidget) quaiWidget = new GestionQuai(this);
+    if (currentModuleWidget == quaiWidget) return;
+    if (currentModuleWidget) {
+        ui->contentLayout->removeWidget(currentModuleWidget);
+        currentModuleWidget->hide();
+    }
+    hideEmployeeControls(ui);
+    ui->contentLayout->addWidget(quaiWidget);
+    quaiWidget->show();
+    currentModuleWidget = quaiWidget;
+    ui->labelTitle->setText("Gestion des Quais");
+}
+
+void MainWindow::onShowShips()
+{
+    if (!navireWidget) navireWidget = new GestionNavires(this);
+    if (currentModuleWidget == navireWidget) return;
+    if (currentModuleWidget) {
+        ui->contentLayout->removeWidget(currentModuleWidget);
+        currentModuleWidget->hide();
+    }
+    hideEmployeeControls(ui);
+    ui->contentLayout->addWidget(navireWidget);
+    navireWidget->show();
+    currentModuleWidget = navireWidget;
+    ui->labelTitle->setText("Gestion des Navires");
+}
+
+void MainWindow::onShowCaptures()
+{
+    if (!captureWidget) captureWidget = new GestionCaptures(this);
+    if (currentModuleWidget == captureWidget) return;
+    if (currentModuleWidget) {
+        ui->contentLayout->removeWidget(currentModuleWidget);
+        currentModuleWidget->hide();
+    }
+    hideEmployeeControls(ui);
+    ui->contentLayout->addWidget(captureWidget);
+    captureWidget->show();
+    currentModuleWidget = captureWidget;
+    ui->labelTitle->setText("Gestion des Captures");
+}
+
+void MainWindow::onShowEmployeesContent()
+{
+    if (currentModuleWidget) {
+        ui->contentLayout->removeWidget(currentModuleWidget);
+        currentModuleWidget->hide();
+        currentModuleWidget = nullptr;
+    }
+    showEmployeeControls(ui);
+    ui->labelTitle->setText("Employees");
+    updateEmployeeStats();
+    updateSalaryStats();
 }
 
 void MainWindow::showLoginPage()

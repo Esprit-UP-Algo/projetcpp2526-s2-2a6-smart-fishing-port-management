@@ -116,6 +116,7 @@ private:
     void configurerExportCSV();
     void configurerSupprimer();
     void configurerModifier();
+    void appliquerStyles();
 
     void syncTables();
     void updateStats();

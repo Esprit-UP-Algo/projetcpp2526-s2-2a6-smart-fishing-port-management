@@ -5,6 +5,7 @@
 #include <QPushButton>
 #include <QMessageBox>
 #include <QLabel>
+#include <QRegularExpression>
 
 AddEditEmployeeDialog::AddEditEmployeeDialog(QWidget *parent, bool isEdit)
     : QDialog(parent), lineId(nullptr), lineNom(nullptr), comboPoste(nullptr),
@@ -61,6 +62,32 @@ AddEditEmployeeDialog::~AddEditEmployeeDialog()
 {
 }
 
+bool AddEditEmployeeDialog::isValidEmail(const QString &email) const
+{
+    QRegularExpression re(R"(^[\w\.\-]+@[\w\-]+(\.[\w\-]+)+$)");
+    return re.match(email.trimmed()).hasMatch();
+}
+
+bool AddEditEmployeeDialog::isValidPhone(const QString &phone) const
+{
+    QString p = phone;
+    p.remove(QRegularExpression("[ \-\(\)]+"));
+    // allow optional + and 6-15 digits
+    QRegularExpression re(R"(^\+?\d{6,15}$)");
+    return re.match(p.trimmed()).hasMatch();
+}
+
+bool AddEditEmployeeDialog::isValidSalary(const QString &salary, double &outValue) const
+{
+    QString s = salary;
+    s.replace(" TND", "");
+    bool ok = false;
+    double v = s.toDouble(&ok);
+    if (!ok) return false;
+    outValue = v;
+    return v >= 0.0;
+}
+
 QString AddEditEmployeeDialog::getId() const
 {
     return lineId ? lineId->text() : QString();
@@ -106,35 +133,45 @@ void AddEditEmployeeDialog::setEmployeeData(const QString &id, const QString &no
 
 void AddEditEmployeeDialog::onAccepted()
 {
-    if (lineId->text().trimmed().isEmpty()) {
+    QString id = lineId->text().trimmed();
+    QString nom = lineNom->text().trimmed();
+    QString email = lineEmail->text().trimmed();
+    QString phone = lineTelephone->text().trimmed();
+    QString salaryStr = lineSalaire->text().trimmed();
+
+    if (id.isEmpty()) {
         QMessageBox::warning(this, "Error", "Please enter Employee ID");
         lineId->setFocus();
         return;
     }
 
-    if (lineNom->text().trimmed().isEmpty()) {
+    if (nom.isEmpty()) {
         QMessageBox::warning(this, "Error", "Please enter Full Name");
         lineNom->setFocus();
         return;
     }
 
-    if (lineEmail->text().trimmed().isEmpty()) {
-        QMessageBox::warning(this, "Error", "Please enter Email");
+    if (email.isEmpty() || !isValidEmail(email)) {
+        QMessageBox::warning(this, "Error", "Please enter a valid Email address");
         lineEmail->setFocus();
         return;
     }
 
-    if (lineTelephone->text().trimmed().isEmpty()) {
-        QMessageBox::warning(this, "Error", "Please enter Phone number");
+    if (phone.isEmpty() || !isValidPhone(phone)) {
+        QMessageBox::warning(this, "Error", "Please enter a valid Phone number (digits only, optional +)");
         lineTelephone->setFocus();
         return;
     }
 
-    if (lineSalaire->text().trimmed().isEmpty()) {
-        QMessageBox::warning(this, "Error", "Please enter Salary");
+    double salaryVal = 0.0;
+    if (salaryStr.isEmpty() || !isValidSalary(salaryStr, salaryVal)) {
+        QMessageBox::warning(this, "Error", "Please enter a valid non-negative Salary");
         lineSalaire->setFocus();
         return;
     }
+
+    // Optional: normalize salary display
+    lineSalaire->setText(QString::number(salaryVal, 'f', 0));
 
     accept();
 }
