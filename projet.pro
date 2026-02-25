@@ -25,12 +25,25 @@ SOURCES += \
     addedit_employeedialog.cpp \
     forgotpassworddialog.cpp
 
+# int7 module sources (GestionQuai / GestionNavires / GestionCaptures / GestionUtilisateurs)
+SOURCES += \
+    int7/gestionquai.cpp \
+    int7/gestionnavires.cpp \
+    int7/gestioncaptures.cpp \
+    int7/gestionutilisateurs.cpp
+
 HEADERS += \
-    ../../CONNECTION/Atelier_Connexion/connection.h \
     connection.h \
     mainwindow.h \
     addedit_employeedialog.h \
     forgotpassworddialog.h
+
+# Headers for int7 modules
+HEADERS += \
+    int7/gestionquai.h \
+    int7/gestionnavires.h \
+    int7/gestioncaptures.h \
+    int7/gestionutilisateurs.h
 
 FORMS += \
     mainwindow.ui
