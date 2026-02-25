@@ -392,7 +392,7 @@ QFrame* GestionNavires::creerCarteStatistique(QString titre, QString valeur, QSt
 {
     QFrame *carte = new QFrame;
     carte->setStyleSheet("QFrame { background-color: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; }"); // réduit
-    carte->setMinimumHeight(120); // réduit
+    carte->setMinimumHeight(80);
 
     QVBoxLayout *layout = new QVBoxLayout(carte);
     layout->setSpacing(8); // réduit

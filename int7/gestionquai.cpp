@@ -9,7 +9,7 @@
 // ============ MonCamembert ============
 MonCamembert::MonCamembert(QWidget *parent) : QWidget(parent) {
     valeurOccupe = 0; valeurDispo = 0;
-    setMinimumSize(250, 250);
+    setMinimumSize(180, 180);
 }
 
 void MonCamembert::setValeurs(int occupe, int dispo) {
@@ -44,7 +44,7 @@ void MonCamembert::paintEvent(QPaintEvent *) {
 
 // ============ MonHistogramme ============
 MonHistogramme::MonHistogramme(QWidget *parent) : QWidget(parent) {
-    setMinimumHeight(250);
+    setMinimumHeight(180);
     showGrid = true;
     showValues = true;
 }
@@ -135,6 +135,7 @@ void MonHistogramme::paintEvent(QPaintEvent *) {
 GestionQuai::GestionQuai(QWidget *parent) : QWidget(parent)
 {
     configurerInterface();
+    appliquerStyles();
     // Initialisation avec quelques quais par défaut (optionnel)
     // Exemple :
     // ajouterQuai(...) mais on peut laisser vide
@@ -227,6 +228,33 @@ void GestionQuai::configurerPages()
     pages->addWidget(pageProposition);
     pages->addWidget(pageSimulation);
     pages->addWidget(pageExportCSV);
+}
+
+void GestionQuai::appliquerStyles()
+{
+    setStyleSheet(R"(
+        QWidget#pageFrame, QFrame#pageFrame { background-color: white; border-radius: 8px; border: 1px solid #e2e8f0; }
+        QPushButton { background-color: #3b82f6; color: white; border-radius: 6px; padding: 8px; font-weight: 600; }
+        QPushButton:hover { background-color: #2563eb; }
+        QLineEdit, QSpinBox, QDoubleSpinBox, QComboBox, QTextEdit {
+            padding: 8px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            background-color: white;
+        }
+        QTableWidget {
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            background-color: white;
+        }
+        QHeaderView::section {
+            background-color: #1e293b;
+            color: white;
+            padding: 8px;
+            border: none;
+            font-weight: 600;
+        }
+    )");
 }
 
 void GestionQuai::configurerAjouter()

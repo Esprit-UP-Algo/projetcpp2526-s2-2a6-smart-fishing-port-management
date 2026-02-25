@@ -98,7 +98,7 @@ void GestionCaptures::configurerTableauBord()
 
     QFrame *carteTotal = new QFrame;
     carteTotal->setStyleSheet("background-color: white; border-radius: 8px; border: 1px solid #e2e8f0; padding: 15px;"); // réduit
-    carteTotal->setMinimumHeight(100); // réduit
+    carteTotal->setMinimumHeight(80);
     QVBoxLayout *layoutTotal = new QVBoxLayout(carteTotal);
     layoutTotal->addWidget(new QLabel("📊"), 0, Qt::AlignCenter);
     labelNbTotal = new QLabel("0");
