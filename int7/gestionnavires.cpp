@@ -265,21 +265,32 @@ void GestionNavires::configurerTableauBord()
     QHBoxLayout *statsLayout = new QHBoxLayout;
     statsLayout->setSpacing(10);
 
-    labelNbTotal = new QLabel("🚢 Total: 0");
-    labelNbQuai = new QLabel("⚓ À quai: 0");
-    labelNbMer = new QLabel("🌊 En mer: 0");
-    labelNbInterdit = new QLabel("⛔ Interdits: 0");
+    // compact stat widgets: numeric label (member) + description label
+    auto makeStatWidget = [&](QLabel *&valueLabel, const QString &desc, const QString &color) -> QWidget* {
+        QWidget *w = new QWidget;
+        QVBoxLayout *l = new QVBoxLayout(w);
+        l->setContentsMargins(6,6,6,6);
+        l->setSpacing(4);
 
-    QString statStyle = "font-size: 13px; font-weight: bold; color: #1e3a8a; padding: 8px; background: #f1f5f9; border-radius: 6px; border-left: 4px solid #3b82f6;";
-    labelNbTotal->setStyleSheet(statStyle);
-    labelNbQuai->setStyleSheet(statStyle);
-    labelNbMer->setStyleSheet(statStyle);
-    labelNbInterdit->setStyleSheet(statStyle);
+        valueLabel = new QLabel("0");
+        valueLabel->setAlignment(Qt::AlignCenter);
+        valueLabel->setStyleSheet(QString("font-size: 18px; font-weight: bold; color: %1;").arg(color));
 
-    statsLayout->addWidget(labelNbTotal);
-    statsLayout->addWidget(labelNbQuai);
-    statsLayout->addWidget(labelNbMer);
-    statsLayout->addWidget(labelNbInterdit);
+        QLabel *descLabel = new QLabel(desc);
+        descLabel->setAlignment(Qt::AlignCenter);
+        descLabel->setStyleSheet("font-size: 13px; color: #64748b;");
+
+        l->addWidget(valueLabel);
+        l->addWidget(descLabel);
+
+        w->setStyleSheet("background: #f1f5f9; border-radius: 6px; padding: 6px; border-left: 4px solid #3b82f6;");
+        return w;
+    };
+
+    statsLayout->addWidget(makeStatWidget(labelNbTotal, "🚢 Total", "#1e3a8a"));
+    statsLayout->addWidget(makeStatWidget(labelNbQuai, "⚓ À quai", "#f59e0b"));
+    statsLayout->addWidget(makeStatWidget(labelNbMer, "🌊 En mer", "#10b981"));
+    statsLayout->addWidget(makeStatWidget(labelNbInterdit, "⛔ Interdits", "#ef4444"));
     statsLayout->addStretch();
 
     statsInnerLayout->addWidget(titreStats);
