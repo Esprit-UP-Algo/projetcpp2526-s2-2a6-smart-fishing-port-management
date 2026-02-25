@@ -82,7 +82,6 @@ private:
     void configurerGestion();
     void appliquerStyles();
     void chargerNavires();
-    QFrame* creerCarteStatistique(QString titre, QString valeur, QString icone, QString couleur);
 
     QStackedWidget *pages;
     QWidget *pageTableauBord;

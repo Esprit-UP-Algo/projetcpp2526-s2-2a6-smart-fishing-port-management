@@ -295,8 +295,8 @@ void GestionNavires::configurerTableauBord()
     actionsLayout->addStretch();
 
     tableNavires = new QTableWidget;
-    tableNavires->setColumnCount(4);
-    tableNavires->setHorizontalHeaderLabels({"Nom", "Immatriculation", "Capacité", "Statut"});
+    tableNavires->setColumnCount(5);
+    tableNavires->setHorizontalHeaderLabels({"Nom", "Immatriculation", "Capacité", "Statut", "Actions"});
     tableNavires->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
     tableNavires->setSelectionBehavior(QAbstractItemView::SelectRows);
     tableNavires->setEditTriggers(QAbstractItemView::NoEditTriggers);
@@ -305,7 +305,7 @@ void GestionNavires::configurerTableauBord()
     tableNavires->setStyleSheet("background: white; border: 1px solid #e2e8f0; border-radius: 6px;"); // réduit
 
     layout->addWidget(titre);
-    layout->addLayout(cartesLayout);
+    layout->addWidget(frameStats);
     layout->addLayout(actionsLayout);
     layout->addWidget(tableNavires);
     layout->addStretch();
@@ -406,7 +406,8 @@ void GestionNavires::configurerGestion()
 void GestionNavires::chargerNavires()
 {
     tableNavires->setRowCount(0);
-    for (const Navire &n : listeNavires) {
+    for (int idx = 0; idx < listeNavires.size(); idx++) {
+        const Navire &n = listeNavires[idx];
         int row = tableNavires->rowCount();
         tableNavires->insertRow(row);
         tableNavires->setItem(row, 0, new QTableWidgetItem(n.getNom()));
@@ -426,7 +427,61 @@ void GestionNavires::chargerNavires()
             statutItem->setForeground(QColor("#991b1b"));
         }
         tableNavires->setItem(row, 3, statutItem);
-        tableNavires->setRowHeight(row, 40); // réduit
+
+        QWidget *actionWidget = new QWidget;
+        QHBoxLayout *actionLayout = new QHBoxLayout(actionWidget);
+        actionLayout->setContentsMargins(3, 3, 3, 3);
+        actionLayout->setSpacing(5);
+
+        QPushButton *btnEdit = new QPushButton("✏️");
+        btnEdit->setToolTip("Modifier");
+        btnEdit->setMaximumWidth(35);
+        btnEdit->setMinimumHeight(30);
+        btnEdit->setStyleSheet("background-color: #3b82f6; color: white; border-radius: 5px; font-size: 14px; padding: 3px;");
+        btnEdit->setCursor(Qt::PointingHandCursor);
+
+        QPushButton *btnDelete = new QPushButton("🗑️");
+        btnDelete->setToolTip("Supprimer");
+        btnDelete->setMaximumWidth(35);
+        btnDelete->setMinimumHeight(30);
+        btnDelete->setStyleSheet("background-color: #ef4444; color: white; border-radius: 5px; font-size: 14px; padding: 3px;");
+        btnDelete->setCursor(Qt::PointingHandCursor);
+
+        actionLayout->addWidget(btnEdit);
+        actionLayout->addWidget(btnDelete);
+        actionLayout->addStretch();
+
+        tableNavires->setCellWidget(row, 4, actionWidget);
+        tableNavires->setRowHeight(row, 40);
+
+        connect(btnEdit, &QPushButton::clicked, this, [this, idx]() {
+            if (idx >= 0 && idx < listeNavires.size()) {
+                DialogNavire dialog(this, &listeNavires[idx], true);
+                int result = dialog.exec();
+                if (result == QDialog::Accepted) {
+                    listeNavires[idx] = dialog.getNavire();
+                    chargerNavires();
+                    mettreAJourStatistiques();
+                    QMessageBox::information(this, "Succès", "Navire modifié avec succès");
+                } else if (result == 2) {
+                    listeNavires.removeAt(idx);
+                    chargerNavires();
+                    mettreAJourStatistiques();
+                    QMessageBox::information(this, "Succès", "Navire supprimé avec succès");
+                }
+            }
+        });
+
+        connect(btnDelete, &QPushButton::clicked, this, [this, idx]() {
+            if (idx >= 0 && idx < listeNavires.size() &&
+                QMessageBox::question(this, "Confirmation", "Voulez-vous vraiment supprimer ce navire ?",
+                                    QMessageBox::Yes | QMessageBox::No) == QMessageBox::Yes) {
+                listeNavires.removeAt(idx);
+                chargerNavires();
+                mettreAJourStatistiques();
+                QMessageBox::information(this, "Succès", "Navire supprimé avec succès");
+            }
+        });
     }
 
     if (tableGestion) {

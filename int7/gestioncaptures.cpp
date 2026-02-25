@@ -135,8 +135,8 @@ void GestionCaptures::configurerTableauBord()
     actionsLayout->addStretch();
 
     tableCaptures = new QTableWidget;
-    tableCaptures->setColumnCount(9);
-    QStringList headers = {"ID", "Navire", "Type", "Icône", "Quantité", "Date", "Heure", "Agent", "Statut"};
+    tableCaptures->setColumnCount(10);
+    QStringList headers = {"ID", "Navire", "Type", "Icône", "Quantité", "Date", "Heure", "Agent", "Statut", "Actions"};
     tableCaptures->setHorizontalHeaderLabels(headers);
     tableCaptures->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
     tableCaptures->setSelectionBehavior(QAbstractItemView::SelectRows);
@@ -356,7 +356,8 @@ void GestionCaptures::actualiserTable()
     if (!tableCaptures) return;
 
     tableCaptures->setRowCount(0);
-    for (const Capture &c : listeCaptures) {
+    for (int idx = 0; idx < listeCaptures.size(); idx++) {
+        const Capture &c = listeCaptures[idx];
         int row = tableCaptures->rowCount();
         tableCaptures->insertRow(row);
 
@@ -385,7 +386,50 @@ void GestionCaptures::actualiserTable()
             statusItem->setForeground(QColor("#4338ca"));
         }
         tableCaptures->setItem(row, 8, statusItem);
-        tableCaptures->setRowHeight(row, 35); // réduit
+
+        QWidget *actionWidget = new QWidget;
+        QHBoxLayout *actionLayout = new QHBoxLayout(actionWidget);
+        actionLayout->setContentsMargins(3, 3, 3, 3);
+        actionLayout->setSpacing(5);
+
+        QPushButton *btnEdit = new QPushButton("✏️");
+        btnEdit->setToolTip("Modifier");
+        btnEdit->setMaximumWidth(35);
+        btnEdit->setMinimumHeight(30);
+        btnEdit->setStyleSheet("background-color: #3b82f6; color: white; border-radius: 5px; font-size: 14px; padding: 3px;");
+        btnEdit->setCursor(Qt::PointingHandCursor);
+
+        QPushButton *btnDelete = new QPushButton("🗑️");
+        btnDelete->setToolTip("Supprimer");
+        btnDelete->setMaximumWidth(35);
+        btnDelete->setMinimumHeight(30);
+        btnDelete->setStyleSheet("background-color: #ef4444; color: white; border-radius: 5px; font-size: 14px; padding: 3px;");
+        btnDelete->setCursor(Qt::PointingHandCursor);
+
+        actionLayout->addWidget(btnEdit);
+        actionLayout->addWidget(btnDelete);
+        actionLayout->addStretch();
+
+        tableCaptures->setCellWidget(row, 9, actionWidget);
+        tableCaptures->setRowHeight(row, 40);
+
+        connect(btnEdit, &QPushButton::clicked, this, [this, idx]() {
+            if (idx >= 0 && idx < listeCaptures.size()) {
+                // Popup to edit capture
+                QMessageBox::information(this, "Modifier", "Modification de la capture " + listeCaptures[idx].captureId);
+            }
+        });
+
+        connect(btnDelete, &QPushButton::clicked, this, [this, idx]() {
+            if (idx >= 0 && idx < listeCaptures.size() &&
+                QMessageBox::question(this, "Confirmation", "Voulez-vous vraiment supprimer cette capture ?",
+                                    QMessageBox::Yes | QMessageBox::No) == QMessageBox::Yes) {
+                listeCaptures.removeAt(idx);
+                sauvegarderCaptures();
+                actualiserTable();
+                QMessageBox::information(this, "Succès", "Capture supprimée avec succès");
+            }
+        });
     }
 
     mettreAJourStatistiques();
