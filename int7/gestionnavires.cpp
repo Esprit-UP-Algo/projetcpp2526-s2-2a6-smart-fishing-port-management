@@ -572,17 +572,33 @@ void GestionNavires::afficherGestion() { pages->setCurrentWidget(pageGestion); }
 void GestionNavires::appliquerStyles()
 {
     setStyleSheet(R"(
+        QWidget#pageFrame, QFrame#pageFrame { background-color: white; border-radius: 8px; border: 1px solid #e2e8f0; }
+        QPushButton { background-color: #3b82f6; color: white; border-radius: 6px; padding: 8px; font-weight: 600; }
+        QPushButton:hover { background-color: #2563eb; }
+        QLineEdit, QSpinBox, QDoubleSpinBox, QComboBox, QTextEdit {
+            padding: 8px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            background-color: white;
+        }
         QTableWidget {
             border: 1px solid #e2e8f0;
-            border-radius: 6px; /* réduit */
+            border-radius: 6px;
             background-color: white;
         }
         QHeaderView::section {
             background-color: #1e293b;
             color: white;
-            padding: 8px; /* réduit */
+            padding: 8px;
             border: none;
             font-weight: 600;
+        }
+        QTableWidget::item:selected {
+            background-color: #bfdbfe;
+            color: #1e3a8a;
+        }
+        QTableWidget::item:hover {
+            background-color: #f1f5f9;
         }
     )");
 }
