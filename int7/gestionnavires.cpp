@@ -1,7 +1,10 @@
 #include "gestionnavires.h"
 #include <QSqlQuery>
+#include <QSqlDatabase>
 #include <QSqlError>
 #include <QDebug>
+#include <QThread>
+#include "connection.h"
 
 // ============ Navire ============
 Navire::Navire() : nom(""), immatriculation(""), capacite(0), statut("À quai") {}
@@ -163,6 +166,7 @@ GestionNavires::GestionNavires(QWidget *parent) : QWidget(parent)
     QHBoxLayout *toolbar = new QHBoxLayout;
     toolbar->setContentsMargins(8, 8, 8, 8); // réduit
     toolbar->setSpacing(8); // réduit
+    toolbar->addStretch();
 
     btnAjouter = new QPushButton("➕ Ajouter");
     btnModifier = new QPushButton("✏️ Modifier");
@@ -183,7 +187,7 @@ GestionNavires::GestionNavires(QWidget *parent) : QWidget(parent)
     // Cadre principal
     QWidget *mainFrame = new QWidget;
     mainFrame->setObjectName("pageFrame");
-    mainFrame->setStyleSheet("background: #1e3a8a; border-radius: 8px; margin: 8px;"); // réduit
+    mainFrame->setStyleSheet("background: white; border-radius: 8px; margin: 8px;"); // reduced background to match mainwindow
 
     pages = new QStackedWidget(mainFrame);
     pages->setObjectName("pagesNavires");
@@ -239,6 +243,12 @@ void GestionNavires::configurerTableauBord()
         l->setContentsMargins(4,4,4,4);
         l->setSpacing(2);
 
+        // gradient background using the provided color
+        QColor base(color);
+        QColor start = base.lighter(180);
+        QString bg = QString("qlineargradient(x1:0,y1:0,x2:0,y2:1, stop:0 %1, stop:1 %2);")
+                     .arg(start.name(), base.name());
+
         valueLabel = new QLabel("0");
         valueLabel->setAlignment(Qt::AlignCenter);
         valueLabel->setStyleSheet(QString("font-size: 18px; font-weight: bold; color: %1;").arg(color));
@@ -250,7 +260,7 @@ void GestionNavires::configurerTableauBord()
         l->addWidget(valueLabel);
         l->addWidget(descLabel);
 
-        w->setStyleSheet("background: #f1f5f9; border-radius: 6px; padding: 4px; border-left: 4px solid #3b82f6;");
+        w->setStyleSheet(QString("background: %1 border-radius: 6px; padding: 4px;").arg(bg));
         return w;
     };
 
@@ -517,6 +527,37 @@ void GestionNavires::ajouterNavire()
         }
     }
 
+    // Try to save to DB within a transaction
+    bool savedToDb = false;
+    Connection conn;
+    if (conn.createconnect()) {
+        QSqlDatabase db = QSqlDatabase::database();
+        if (db.isOpen()) {
+            if (db.transaction()) {
+                QSqlQuery q(db);
+                q.prepare("INSERT INTO navires (nom, immatriculation, capacite, statut) VALUES (:nom, :immat, :cap, :stat)");
+                q.bindValue(":nom", nom);
+                q.bindValue(":immat", immat);
+                q.bindValue(":cap", comboCapacite->currentText().toInt());
+                q.bindValue(":stat", comboStatut->currentText());
+                if (q.exec()) {
+                    if (!db.commit()) {
+                        qDebug() << "DB commit failed:" << db.lastError().text();
+                        db.rollback();
+                    } else {
+                        savedToDb = true;
+                    }
+                } else {
+                    qDebug() << "Failed to INSERT navire:" << q.lastError().text();
+                    db.rollback();
+                }
+            } else {
+                qDebug() << "Failed to start DB transaction:" << db.lastError().text();
+            }
+        }
+    }
+
+    // Update local list/UI regardless, but inform if DB wasn't updated
     listeNavires.append(Navire(nom, immat, comboCapacite->currentText().toInt(), comboStatut->currentText()));
     champNom->clear();
     champImmat->clear();
@@ -524,13 +565,38 @@ void GestionNavires::ajouterNavire()
     comboStatut->setCurrentIndex(0);
     chargerNavires();
     mettreAJourStatistiques();
-    QMessageBox::information(this, "Succès", "Navire ajouté avec succès");
+    if (savedToDb) QMessageBox::information(this, "Succès", "Navire ajouté avec succès (saved to DB)");
+    else QMessageBox::information(this, "Succès", "Navire ajouté locally (DB not available)");
 }
 
 void GestionNavires::loadFromDb()
 {
     listeNavires.clear();
-    QSqlQuery q;
+
+    // Ensure DB connection is open (with retries)
+    Connection conn;
+    QSqlDatabase db = QSqlDatabase::database();
+    if (!db.isValid() || !db.isOpen()) {
+        const int maxAttempts = 3;
+        int attempts = 0;
+        bool connected = false;
+        while (attempts < maxAttempts) {
+            if (conn.createconnect()) { connected = true; break; }
+            attempts++;
+            qDebug() << "[GestionNavires] DB connect attempt" << attempts << "failed, retrying...";
+            QThread::msleep(200);
+            db = QSqlDatabase::database();
+        }
+        if (!connected) {
+            qDebug() << "[GestionNavires] DB connect failed after retries; aborting loadFromDb.";
+            return;
+        }
+    }
+
+    db = QSqlDatabase::database();
+    qDebug() << "[GestionNavires] Using DB connection:" << db.connectionName() << "driver:" << db.driverName();
+
+    QSqlQuery q(db);
     if (!q.exec("SELECT nom, immatriculation, capacite, statut FROM navires")) {
         qDebug() << "Navires load error:" << q.lastError().text();
         return;
@@ -566,17 +632,63 @@ void GestionNavires::modifierNavire()
     if (index >= 0) {
         DialogNavire dialog(this, &listeNavires[index], true);
         int result = dialog.exec();
-        if (result == QDialog::Accepted) {
-            listeNavires[index] = dialog.getNavire();
-            chargerNavires();
-            mettreAJourStatistiques();
-            QMessageBox::information(this, "Succès", "Navire modifié avec succès");
-        } else if (result == 2) {
-            listeNavires.removeAt(index);
-            chargerNavires();
-            mettreAJourStatistiques();
-            QMessageBox::information(this, "Succès", "Navire supprimé avec succès");
-        }
+                if (result == QDialog::Accepted) {
+                    Navire updated = dialog.getNavire();
+                    bool dbOk = false;
+                    Connection conn;
+                    if (conn.createconnect()) {
+                        QSqlDatabase db = QSqlDatabase::database();
+                        if (db.isOpen() && db.transaction()) {
+                            QSqlQuery q(db);
+                            q.prepare("UPDATE navires SET nom = :nom, capacite = :cap, statut = :stat WHERE immatriculation = :immat");
+                            q.bindValue(":nom", updated.getNom());
+                            q.bindValue(":cap", updated.getCapacite());
+                            q.bindValue(":stat", updated.getStatut());
+                            q.bindValue(":immat", updated.getImmatriculation());
+                            if (q.exec()) {
+                                if (!db.commit()) {
+                                    qDebug() << "DB commit failed on update:" << db.lastError().text();
+                                    db.rollback();
+                                } else dbOk = true;
+                            } else {
+                                qDebug() << "Failed to UPDATE navire:" << q.lastError().text();
+                                db.rollback();
+                            }
+                        }
+                    }
+                    listeNavires[index] = updated;
+                    chargerNavires();
+                    mettreAJourStatistiques();
+                    if (dbOk) QMessageBox::information(this, "Succès", "Navire modifié avec succès (DB)");
+                    else QMessageBox::information(this, "Succès", "Navire modifié locally (DB not available)");
+                } else if (result == 2) {
+                    // deletion via dialog
+                    QString immatToDel = listeNavires[index].getImmatriculation();
+                    bool dbDeleted = false;
+                    Connection conn;
+                    if (conn.createconnect()) {
+                        QSqlDatabase db = QSqlDatabase::database();
+                        if (db.isOpen() && db.transaction()) {
+                            QSqlQuery q(db);
+                            q.prepare("DELETE FROM navires WHERE immatriculation = :immat");
+                            q.bindValue(":immat", immatToDel);
+                            if (q.exec()) {
+                                if (!db.commit()) {
+                                    qDebug() << "DB commit failed on delete:" << db.lastError().text();
+                                    db.rollback();
+                                } else dbDeleted = true;
+                            } else {
+                                qDebug() << "Failed to DELETE navire:" << q.lastError().text();
+                                db.rollback();
+                            }
+                        }
+                    }
+                    listeNavires.removeAt(index);
+                    chargerNavires();
+                    mettreAJourStatistiques();
+                    if (dbDeleted) QMessageBox::information(this, "Succès", "Navire supprimé avec succès (DB)");
+                    else QMessageBox::information(this, "Succès", "Navire supprimé locally (DB not available)");
+                }
     }
 }
 
@@ -591,6 +703,26 @@ void GestionNavires::supprimerNavire()
     if (QMessageBox::question(this, "Confirmation", "Voulez-vous vraiment supprimer ce navire ?",
                               QMessageBox::Yes | QMessageBox::No) == QMessageBox::Yes) {
         QString immat = tableNavires->item(row, 1)->text();
+        bool dbDeleted = false;
+        Connection conn;
+        if (conn.createconnect()) {
+            QSqlDatabase db = QSqlDatabase::database();
+            if (db.isOpen() && db.transaction()) {
+                QSqlQuery q(db);
+                q.prepare("DELETE FROM navires WHERE immatriculation = :immat");
+                q.bindValue(":immat", immat);
+                if (q.exec()) {
+                    if (!db.commit()) {
+                        qDebug() << "DB commit failed on delete:" << db.lastError().text();
+                        db.rollback();
+                    } else dbDeleted = true;
+                } else {
+                    qDebug() << "Failed to DELETE navire:" << q.lastError().text();
+                    db.rollback();
+                }
+            }
+        }
+
         for (int i = 0; i < listeNavires.size(); i++) {
             if (listeNavires[i].getImmatriculation() == immat) {
                 listeNavires.removeAt(i);
@@ -599,7 +731,8 @@ void GestionNavires::supprimerNavire()
         }
         chargerNavires();
         mettreAJourStatistiques();
-        QMessageBox::information(this, "Succès", "Navire supprimé avec succès");
+        if (dbDeleted) QMessageBox::information(this, "Succès", "Navire supprimé avec succès (DB)");
+        else QMessageBox::information(this, "Succès", "Navire supprimé locally (DB not available)");
     }
 }
 
@@ -629,11 +762,13 @@ void GestionNavires::appliquerStyles()
             border: 1px solid #cbd5e1;
             border-radius: 6px;
             background-color: white;
+            color: #0f172a; /* ensure text is dark (black-ish) */
         }
         QTableWidget {
             border: 1px solid #e2e8f0;
             border-radius: 6px;
             background-color: white;
+            color: #0f172a; /* table item text color */
         }
         QHeaderView::section {
             background-color: #1e293b;

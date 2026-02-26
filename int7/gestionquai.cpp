@@ -1,6 +1,8 @@
 #include "gestionquai.h"
 #include <QSqlQuery>
+#include <QSqlDatabase>
 #include <QSqlError>
+#include "connection.h"
 #include <QDebug>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
@@ -154,6 +156,7 @@ void GestionQuai::configurerInterface()
     QHBoxLayout *toolbar = new QHBoxLayout;
     toolbar->setContentsMargins(8, 8, 8, 8);
     toolbar->setSpacing(8);
+    toolbar->addStretch();
 
     btnAjouter = new QPushButton("➕ Ajouter");
     btnModifier = new QPushButton("✏️ Modifier");
@@ -179,7 +182,7 @@ void GestionQuai::configurerInterface()
     // Cadre principal
     QWidget *mainFrame = new QWidget;
     mainFrame->setObjectName("pageFrame");
-    mainFrame->setStyleSheet("background: #1e3a8a; border-radius: 8px; margin: 8px;");
+    mainFrame->setStyleSheet("background: white; border-radius: 8px; margin: 8px;");
 
     pages = new QStackedWidget(mainFrame);
     configurerPages();
@@ -338,8 +341,8 @@ void GestionQuai::configurerConsulter()
     searchLayout->addWidget(sortBox);
     searchLayout->addStretch();
 
-    tableConsulter = new QTableWidget(0,7);
-    QStringList headers = {"ID", "Nom", "Places totales", "Navires présents", "Adresse", "Travaux", "État"};
+    tableConsulter = new QTableWidget(0,8);
+    QStringList headers = {"ID", "Nom", "Places totales", "Navires présents", "Adresse", "Travaux", "État", "Actions"};
     tableConsulter->setHorizontalHeaderLabels(headers);
     tableConsulter->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
     tableConsulter->setSelectionBehavior(QAbstractItemView::SelectRows);
@@ -452,6 +455,49 @@ void GestionQuai::loadFromDb()
         tableConsulter->setItem(row, 4, new QTableWidgetItem(q.value(4).toString()));
         tableConsulter->setItem(row, 5, new QTableWidgetItem(q.value(5).toString()));
         tableConsulter->setItem(row, 6, new QTableWidgetItem(q.value(6).toString()));
+        // Actions column: Edit / Delete
+        QString id = q.value(0).toString();
+        QWidget *actionWidget = new QWidget();
+        QHBoxLayout *actionLayout = new QHBoxLayout(actionWidget);
+        actionLayout->setContentsMargins(0,0,0,0);
+        actionLayout->setSpacing(6);
+        QPushButton *btnEdit = new QPushButton("✏️");
+        btnEdit->setCursor(Qt::PointingHandCursor);
+        btnEdit->setStyleSheet("background-color:#f97316;color:white;border-radius:6px;padding:6px;min-width:36px;");
+        QPushButton *btnDelete = new QPushButton("🗑️");
+        btnDelete->setCursor(Qt::PointingHandCursor);
+        btnDelete->setStyleSheet("background-color:#ef4444;color:white;border-radius:6px;padding:6px;min-width:36px;");
+        actionLayout->addWidget(btnEdit);
+        actionLayout->addWidget(btnDelete);
+        actionLayout->addStretch();
+        tableConsulter->setCellWidget(row, 7, actionWidget);
+
+        // Edit: sync tables then open modifier and fill form for this ID
+        connect(btnEdit, &QPushButton::clicked, this, [this, id]() {
+            syncTables();
+            for (int i = 0; i < tableModifier->rowCount(); ++i) {
+                if (tableModifier->item(i,0) && tableModifier->item(i,0)->text() == id) {
+                    tableModifier->selectRow(i);
+                    remplirFormulaireDepuisTable(i, 0);
+                    showModifier();
+                    break;
+                }
+            }
+        });
+
+        // Delete: remove from consult table and sync
+        connect(btnDelete, &QPushButton::clicked, this, [this, id]() {
+            if (QMessageBox::question(this, "Confirmer la suppression", "Voulez-vous vraiment supprimer le quai :\n" + id + "?", QMessageBox::Yes | QMessageBox::No) == QMessageBox::Yes) {
+                for (int r = 0; r < tableConsulter->rowCount(); ++r) {
+                    if (tableConsulter->item(r,0) && tableConsulter->item(r,0)->text() == id) {
+                        tableConsulter->removeRow(r);
+                        syncTables();
+                        QMessageBox::information(this, "Succès", "Quai supprimé avec succès !");
+                        break;
+                    }
+                }
+            }
+        });
     }
     updateStats();
 }
@@ -560,7 +606,7 @@ void GestionQuai::configurerSimulation()
     lblStatsDetaillees = new QLabel;
     lblStatsDetaillees->setWordWrap(true);
     lblStatsDetaillees->setAlignment(Qt::AlignLeft);
-    lblStatsDetaillees->setStyleSheet("background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px;");
+    lblStatsDetaillees->setStyleSheet("background: qlineargradient(x1:0,y1:0,x2:0,y2:1, stop:0 #f0f9ff, stop:1 #e0f2fe); border: 1px solid #93c5fd; border-radius: 6px; padding: 10px;");
     lblStatsDetaillees->setMinimumHeight(80);
 
     simulLayout->addLayout(controlsLayout1);
@@ -639,8 +685,8 @@ void GestionQuai::configurerSupprimer()
 
     QVBoxLayout *supLay = new QVBoxLayout(content);
 
-    tableSupprimer = new QTableWidget(0,7);
-    QStringList headers = {"ID", "Nom", "Places totales", "Navires présents", "Adresse", "Travaux", "État"};
+    tableSupprimer = new QTableWidget(0,8);
+    QStringList headers = {"ID", "Nom", "Places totales", "Navires présents", "Adresse", "Travaux", "État", "Actions"};
     tableSupprimer->setHorizontalHeaderLabels(headers);
     tableSupprimer->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
     tableSupprimer->setSelectionBehavior(QAbstractItemView::SelectRows);
@@ -673,8 +719,8 @@ void GestionQuai::configurerModifier()
 
     QHBoxLayout *modLayout = new QHBoxLayout(content);
 
-    tableModifier = new QTableWidget(0,7);
-    QStringList headers = {"ID", "Nom", "Places totales", "Navires présents", "Adresse", "Travaux", "État"};
+    tableModifier = new QTableWidget(0,8);
+    QStringList headers = {"ID", "Nom", "Places totales", "Navires présents", "Adresse", "Travaux", "État", "Actions"};
     tableModifier->setHorizontalHeaderLabels(headers);
     tableModifier->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
     tableModifier->setSelectionBehavior(QAbstractItemView::SelectRows);
@@ -855,11 +901,76 @@ void GestionQuai::ajouterQuai() {
     tableConsulter->setItem(r,5,new QTableWidgetItem(travaux ? "Oui" : "Non"));
     tableConsulter->setItem(r,6,new QTableWidgetItem(etat));
 
+    // Create actions for the new row (Edit/Delete)
+    QString id = idEdit->text();
+    QWidget *actionWidget = new QWidget();
+    QHBoxLayout *actionLayout = new QHBoxLayout(actionWidget);
+    actionLayout->setContentsMargins(0,0,0,0);
+    actionLayout->setSpacing(6);
+    QPushButton *btnEdit = new QPushButton("✏️");
+    btnEdit->setCursor(Qt::PointingHandCursor);
+    btnEdit->setStyleSheet("background-color:#f97316;color:white;border-radius:6px;padding:6px;min-width:36px;");
+    QPushButton *btnDelete = new QPushButton("🗑️");
+    btnDelete->setCursor(Qt::PointingHandCursor);
+    btnDelete->setStyleSheet("background-color:#ef4444;color:white;border-radius:6px;padding:6px;min-width:36px;");
+    actionLayout->addWidget(btnEdit);
+    actionLayout->addWidget(btnDelete);
+    actionLayout->addStretch();
+    tableConsulter->setCellWidget(r, 7, actionWidget);
+
+    connect(btnEdit, &QPushButton::clicked, this, [this, id]() {
+        syncTables();
+        for (int i = 0; i < tableModifier->rowCount(); ++i) {
+            if (tableModifier->item(i,0) && tableModifier->item(i,0)->text() == id) {
+                tableModifier->selectRow(i);
+                remplirFormulaireDepuisTable(i, 0);
+                showModifier();
+                break;
+            }
+        }
+    });
+
+    connect(btnDelete, &QPushButton::clicked, this, [this, id]() {
+        if (QMessageBox::question(this, "Confirmer la suppression", "Voulez-vous vraiment supprimer le quai :\n" + id + "?", QMessageBox::Yes | QMessageBox::No) == QMessageBox::Yes) {
+            for (int r2 = 0; r2 < tableConsulter->rowCount(); ++r2) {
+                if (tableConsulter->item(r2,0) && tableConsulter->item(r2,0)->text() == id) {
+                    tableConsulter->removeRow(r2);
+                    syncTables();
+                    QMessageBox::information(this, "Succès", "Quai supprimé avec succès !");
+                    break;
+                }
+            }
+        }
+    });
+
+    // Persist to DB (attempt transaction)
+    Connection conn;
+    bool dbSaved = false;
+    if (conn.createconnect()) {
+        QSqlDatabase db = QSqlDatabase::database();
+        if (db.isOpen() && db.transaction()) {
+            QSqlQuery q(db);
+            q.prepare("INSERT INTO quais (id, nom, places_total, navires_present, adresse, travaux, etat) VALUES (:id, :nom, :places, :navires, :adresse, :travaux, :etat)");
+            q.bindValue(":id", idEdit->text());
+            q.bindValue(":nom", nomEdit->text());
+            q.bindValue(":places", places);
+            q.bindValue(":navires", navires);
+            q.bindValue(":adresse", adresseEdit->text());
+            q.bindValue(":travaux", travaux ? "Oui" : "Non");
+            q.bindValue(":etat", etat);
+            if (q.exec()) {
+                if (!db.commit()) { qDebug() << "Failed to commit quai insert:" << db.lastError().text(); db.rollback(); }
+                else dbSaved = true;
+            } else { qDebug() << "Failed to INSERT quai:" << q.lastError().text(); db.rollback(); }
+        }
+    }
+
     idEdit->clear(); nomEdit->clear(); placesEdit->clear(); naviresEdit->clear(); adresseEdit->clear();
     travauxCheck->setChecked(false);
     syncTables();
 
     QMessageBox::information(this, "Succès", "Quai ajouté avec succès !");
+    if (!dbSaved) qDebug() << "Note: quai added locally but not saved to DB.";
 }
 
 void GestionQuai::supprimerQuai() {
@@ -871,9 +982,26 @@ void GestionQuai::supprimerQuai() {
         if(QMessageBox::question(this, "Confirmer la suppression",
                                   "Voulez-vous vraiment supprimer le quai :\n" + nomQuai + " (ID: " + idQuai + ")?",
                                   QMessageBox::Yes | QMessageBox::No) == QMessageBox::Yes) {
+            // Attempt DB delete
+            bool dbDeleted = false;
+            Connection conn;
+            if (conn.createconnect()) {
+                QSqlDatabase db = QSqlDatabase::database();
+                if (db.isOpen() && db.transaction()) {
+                    QSqlQuery q(db);
+                    q.prepare("DELETE FROM quais WHERE id = :id");
+                    q.bindValue(":id", idQuai);
+                    if (q.exec()) {
+                        if (!db.commit()) { qDebug() << "Failed to commit quai delete:" << db.lastError().text(); db.rollback(); }
+                        else dbDeleted = true;
+                    } else { qDebug() << "Failed to DELETE quai:" << q.lastError().text(); db.rollback(); }
+                }
+            }
+
             tableConsulter->removeRow(r);
             syncTables();
-            QMessageBox::information(this, "Succès", "Quai supprimé avec succès !");
+            if (dbDeleted) QMessageBox::information(this, "Succès", "Quai supprimé avec succès (DB)");
+            else QMessageBox::information(this, "Succès", "Quai supprimé localement (DB not available)");
         }
     } else {
         QMessageBox::warning(this, "Erreur", "Veuillez sélectionner un quai à supprimer.");
@@ -926,7 +1054,30 @@ void GestionQuai::modifierQuai() {
     tableConsulter->item(r,6)->setText(etat);
 
     syncTables();
+    // Persist modification to DB
+    bool dbUpdated = false;
+    Connection conn;
+    if (conn.createconnect()) {
+        QSqlDatabase db = QSqlDatabase::database();
+        if (db.isOpen() && db.transaction()) {
+            QSqlQuery q(db);
+            q.prepare("UPDATE quais SET nom = :nom, places_total = :places, navires_present = :navires, adresse = :adresse, travaux = :travaux, etat = :etat WHERE id = :id");
+            q.bindValue(":nom", nomEditM->text());
+            q.bindValue(":places", places);
+            q.bindValue(":navires", navires);
+            q.bindValue(":adresse", adresseEditM->text());
+            q.bindValue(":travaux", travaux ? "Oui" : "Non");
+            q.bindValue(":etat", etat);
+            q.bindValue(":id", idEditM->text());
+            if (q.exec()) {
+                if (!db.commit()) { qDebug() << "Failed to commit quai update:" << db.lastError().text(); db.rollback(); }
+                else dbUpdated = true;
+            } else { qDebug() << "Failed to UPDATE quai:" << q.lastError().text(); db.rollback(); }
+        }
+    }
+
     QMessageBox::information(this, "Succès", "Quai modifié avec succès !");
+    if (!dbUpdated) qDebug() << "Note: quai modified locally but not updated in DB.";
 }
 
 void GestionQuai::rechercherQuai(const QString &texte) {

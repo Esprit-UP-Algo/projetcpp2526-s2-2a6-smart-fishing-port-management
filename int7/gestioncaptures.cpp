@@ -3,6 +3,7 @@
 #include <QSqlError>
 #include <QDebug>
 #include <QVBoxLayout>
+#include <QSqlDatabase>
 #include <QHBoxLayout>
 #include <QFormLayout>
 #include <QGridLayout>
@@ -10,6 +11,8 @@
 #include <QFileDialog>
 #include <QTextStream>
 #include <QDesktopServices>
+#include "connection.h"
+#include <QThread>
 
 GestionCaptures::GestionCaptures(QWidget *parent) : QWidget(parent), modeModification(false)
 {
@@ -37,6 +40,7 @@ void GestionCaptures::configurerInterface()
     QHBoxLayout *toolbar = new QHBoxLayout;
     toolbar->setContentsMargins(8, 8, 8, 8);
     toolbar->setSpacing(8);
+    toolbar->addStretch();
 
     btnAjouter = new QPushButton("➕ Ajouter");
     btnModifier = new QPushButton("✏️ Modifier");
@@ -59,7 +63,7 @@ void GestionCaptures::configurerInterface()
     // Cadre principal
     QWidget *mainFrame = new QWidget;
     mainFrame->setObjectName("pageFrame");
-    mainFrame->setStyleSheet("background: #1e3a8a; border-radius: 8px; margin: 8px;");
+    mainFrame->setStyleSheet("background: white; border-radius: 8px; margin: 8px;");
 
     pages = new QStackedWidget(mainFrame);
 
@@ -116,6 +120,11 @@ void GestionCaptures::configurerTableauBord()
             l->setContentsMargins(4,4,4,4);
             l->setSpacing(2);
 
+        QColor base(color);
+        QColor start = base.lighter(180);
+        QString bg = QString("qlineargradient(x1:0,y1:0,x2:0,y2:1, stop:0 %1, stop:1 %2);")
+                     .arg(start.name(), base.name());
+
         valueLabel = new QLabel("0");
         valueLabel->setAlignment(Qt::AlignCenter);
         valueLabel->setStyleSheet(QString("font-size: 18px; font-weight: bold; color: %1;").arg(color));
@@ -127,7 +136,7 @@ void GestionCaptures::configurerTableauBord()
         l->addWidget(valueLabel);
         l->addWidget(descLabel);
 
-        w->setStyleSheet("background: #f1f5f9; border-radius: 6px; padding: 4px; border-left: 4px solid #3b82f6;");
+        w->setStyleSheet(QString("background: %1 border-radius: 6px; padding: 4px;").arg(bg));
         return w;
     };
 
@@ -365,6 +374,71 @@ void GestionCaptures::sauvegarderCaptures()
         file.write(doc.toJson());
         file.close();
     }
+
+    // Persist captures using MERGE (upsert) inside a transaction and retry connection if unstable
+    Connection conn;
+    const int maxAttempts = 3;
+    int attempts = 0;
+    bool connected = false;
+    while (attempts < maxAttempts) {
+        if (conn.createconnect()) { connected = true; break; }
+        attempts++;
+        qDebug() << "[GestionCaptures] DB connect attempt" << attempts << "failed, retrying...";
+        QThread::msleep(250);
+    }
+    if (!connected) {
+        qDebug() << "[GestionCaptures] DB connect failed after retries: captures not persisted to DB";
+        return;
+    }
+
+    QSqlDatabase db = QSqlDatabase::database();
+    if (!db.isOpen()) {
+        qDebug() << "Database not open after createconnect()";
+        return;
+    }
+
+    if (!db.transaction()) {
+        qDebug() << "Failed to start transaction for captures:" << db.lastError().text();
+    }
+
+    QSqlQuery q(db);
+    for (const Capture &c : listeCaptures) {
+        // Try update first (captureId is primary key)
+        q.prepare("UPDATE captures SET shipName = :ship, fishType = :type, quantity = :qty, captureDate = TO_DATE(:date,'YYYY-MM-DD'), agent = :agent WHERE captureId = :captureId");
+        q.bindValue(":ship", c.shipName);
+        q.bindValue(":type", c.fishType);
+        q.bindValue(":qty", c.quantity);
+        q.bindValue(":date", c.captureDate.toString("yyyy-MM-dd"));
+        q.bindValue(":agent", c.agent);
+        q.bindValue(":captureId", c.captureId);
+        if (!q.exec()) {
+            qDebug() << "Failed to execute UPDATE for capture" << c.captureId << ":" << q.lastError().text();
+            db.rollback();
+            return;
+        }
+
+        int updated = q.numRowsAffected();
+        if (updated <= 0) {
+            QSqlQuery ins(db);
+            ins.prepare("INSERT INTO captures (captureId, shipName, fishType, quantity, captureDate, agent) VALUES (:captureId, :ship, :type, :qty, TO_DATE(:date,'YYYY-MM-DD'), :agent)");
+            ins.bindValue(":captureId", c.captureId);
+            ins.bindValue(":ship", c.shipName);
+            ins.bindValue(":type", c.fishType);
+            ins.bindValue(":qty", c.quantity);
+            ins.bindValue(":date", c.captureDate.toString("yyyy-MM-dd"));
+            ins.bindValue(":agent", c.agent);
+            if (!ins.exec()) {
+                qDebug() << "Failed to INSERT capture" << c.captureId << ":" << ins.lastError().text();
+                db.rollback();
+                return;
+            }
+        }
+    }
+
+    if (!db.commit()) {
+        qDebug() << "Failed to commit captures transaction:" << db.lastError().text();
+        db.rollback();
+    }
 }
 
 void GestionCaptures::actualiserTable()
@@ -560,11 +634,50 @@ void GestionCaptures::ajouterCapture()
 void GestionCaptures::loadFromDb()
 {
     listeCaptures.clear();
-    QSqlQuery q;
+
+    // Ensure we have an open DB connection; try to connect if not
+    Connection conn;
+    QSqlDatabase db = QSqlDatabase::database();
+    if (!db.isValid() || !db.isOpen()) {
+        const int maxAttempts = 3;
+        int attempts = 0;
+        bool connected = false;
+        while (attempts < maxAttempts) {
+            if (conn.createconnect()) { connected = true; break; }
+            attempts++;
+            qDebug() << "[GestionCaptures] DB connect attempt" << attempts << "failed, retrying...";
+            QThread::msleep(200);
+            db = QSqlDatabase::database();
+        }
+        if (!connected) {
+            qDebug() << "[GestionCaptures] DB connect failed after retries; falling back to JSON.";
+            chargerCaptures();
+            actualiserTable();
+            mettreAJourStatistiques();
+            return;
+        }
+    }
+
+    db = QSqlDatabase::database();
+    qDebug() << "[GestionCaptures] Using DB connection:" << db.connectionName() << "driver:" << db.driverName();
+
+    QSqlQuery q(db);
     if (!q.exec("SELECT captureId, shipName, fishType, quantity, captureDate, agent FROM captures")) {
         qDebug() << "Captures load error:" << q.lastError().text();
+        // try to report count for debugging
+        QSqlQuery cnt(db);
+        if (cnt.exec("SELECT COUNT(*) FROM captures") && cnt.next()) {
+            qDebug() << "captures table count:" << cnt.value(0).toInt();
+        } else {
+            qDebug() << "Failed to read captures count:" << cnt.lastError().text();
+        }
+        // fallback to local JSON storage
+        chargerCaptures();
+        actualiserTable();
+        mettreAJourStatistiques();
         return;
     }
+
     while (q.next()) {
         Capture c;
         c.captureId = q.value(0).toString();
@@ -575,6 +688,12 @@ void GestionCaptures::loadFromDb()
         c.agent = q.value(5).toString();
         listeCaptures.append(c);
     }
+
+    if (listeCaptures.isEmpty()) {
+        qDebug() << "[GestionCaptures] Query returned zero rows; falling back to JSON file.";
+        chargerCaptures();
+    }
+
     actualiserTable();
     mettreAJourStatistiques();
 }

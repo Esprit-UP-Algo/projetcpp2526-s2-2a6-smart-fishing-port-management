@@ -251,6 +251,13 @@ void MainWindow::onShowCaptures()
         currentModuleWidget->hide();
     }
     hideEmployeeControls(ui);
+    // Ensure DB connection is attempted so the captures view can load DB data
+    Connection conn;
+    if (conn.createconnect()) {
+        captureWidget->loadFromDb();
+    } else {
+        qDebug() << "[MainWindow] Could not connect to DB when opening Captures; falling back to local data.";
+    }
     ui->contentLayout->addWidget(captureWidget);
     captureWidget->show();
     currentModuleWidget = captureWidget;

@@ -2,6 +2,8 @@
 #include <QSqlQuery>
 #include <QSqlError>
 #include <QDebug>
+#include "connection.h"
+#include <QThread>
 
 DialogEmploye::DialogEmploye(QWidget *parent, bool isEditMode)
     : QDialog(parent), isEditMode(isEditMode)
@@ -400,6 +402,72 @@ void GestionUtilisateurs::sauvegarderEmployes()
         file.write(doc.toJson());
         file.close();
     }
+
+    // Persist changes to the database using MERGE (upsert) inside a transaction
+    Connection conn;
+    const int maxAttempts = 3;
+    int attempts = 0;
+    bool connected = false;
+    while (attempts < maxAttempts) {
+        if (conn.createconnect()) { connected = true; break; }
+        attempts++;
+        qDebug() << "[GestionUtilisateurs] DB connect attempt" << attempts << "failed, retrying...";
+        QThread::msleep(250);
+    }
+    if (!connected) {
+        qDebug() << "[GestionUtilisateurs] DB connect failed after retries: employes not persisted to DB";
+        return;
+    }
+
+    QSqlDatabase db = QSqlDatabase::database();
+    if (!db.isOpen()) {
+        qDebug() << "Database not open after createconnect()";
+        return;
+    }
+
+    if (!db.transaction()) {
+        qDebug() << "Failed to start transaction for employes:" << db.lastError().text();
+    }
+
+    QSqlQuery q(db);
+    for (const Employe &e : listeEmployes) {
+        // Try update first
+        q.prepare("UPDATE employes SET nom = :nom, poste = :poste, email = :email, telephone = :telephone, salaire = :salaire WHERE id = :id");
+        q.bindValue(":nom", e.nom);
+        q.bindValue(":poste", e.poste);
+        q.bindValue(":email", e.email);
+        q.bindValue(":telephone", e.telephone);
+        q.bindValue(":salaire", e.salaire);
+        q.bindValue(":id", e.id);
+        if (!q.exec()) {
+            qDebug() << "Failed to execute UPDATE for employe" << e.id << ":" << q.lastError().text();
+            db.rollback();
+            return;
+        }
+
+        int updated = q.numRowsAffected();
+        if (updated <= 0) {
+            // perform insert
+            QSqlQuery ins(db);
+            ins.prepare("INSERT INTO employes (id, nom, poste, email, telephone, salaire) VALUES (:id, :nom, :poste, :email, :telephone, :salaire)");
+            ins.bindValue(":id", e.id);
+            ins.bindValue(":nom", e.nom);
+            ins.bindValue(":poste", e.poste);
+            ins.bindValue(":email", e.email);
+            ins.bindValue(":telephone", e.telephone);
+            ins.bindValue(":salaire", e.salaire);
+            if (!ins.exec()) {
+                qDebug() << "Failed to INSERT employe" << e.id << ":" << ins.lastError().text();
+                db.rollback();
+                return;
+            }
+        }
+    }
+
+    if (!db.commit()) {
+        qDebug() << "Failed to commit employes transaction:" << db.lastError().text();
+        db.rollback();
+    }
 }
 
 void GestionUtilisateurs::actualiserTable()
@@ -591,6 +659,11 @@ void GestionUtilisateurs::loadFromDb()
     QSqlQuery q;
     if (!q.exec("SELECT id, nom, poste, email, telephone, salaire FROM employes")) {
         qDebug() << "Users load error:" << q.lastError().text();
+        // fallback to local JSON storage
+        chargerEmployes();
+        actualiserTable();
+        mettreAJourStatistiques();
+        mettreAJourStatistiquesSalaires();
         return;
     }
     while (q.next()) {
@@ -602,6 +675,10 @@ void GestionUtilisateurs::loadFromDb()
         e.telephone = q.value(4).toString();
         e.salaire = q.value(5).toDouble();
         listeEmployes.append(e);
+    }
+    if (listeEmployes.isEmpty()) {
+        // no rows in DB, fallback to JSON file
+        chargerEmployes();
     }
     actualiserTable();
     mettreAJourStatistiques();
