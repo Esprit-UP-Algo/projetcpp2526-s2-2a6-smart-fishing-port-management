@@ -57,6 +57,7 @@ private:
     void updateEmployeeStats();
     void updateSalaryStats();
     void generateAnalyticsPDF();
+    QString generateNextEmployeeId();
 
     QString analyticsStatsText;
     void* analyticsPieChart = nullptr;

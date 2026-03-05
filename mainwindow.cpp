@@ -44,6 +44,7 @@ MainWindow::MainWindow(QWidget *parent)
     ui->setupUi(this);
     
     setupTableEmployees();
+    loadEmployeesFromDb();
     
     setupConnections();
     
@@ -66,72 +67,7 @@ void MainWindow::setupTableEmployees()
     table->verticalHeader()->setVisible(false);
     table->horizontalHeader()->setStretchLastSection(true);
     table->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
-    table->setRowCount(5);
-    
-    QStringList ids = {"1", "2", "3", "4", "5"};
-    QStringList noms = {"Ali Ben", "Sara Khelifa", "Omar Said", "Lina Boudiaf", "Yassine Amrani"};
-    QStringList postes = {"Pêcheur", "Matelot", "Docker", "Chef de quai", "Superviseur"};
-    QStringList emails = {"ali@port.com", "sara@port.com", "omar@port.com", "lina@port.com", "yassine@port.com"};
-    QStringList tels = {"0600000001", "0600000002", "0600000003", "0600000004", "0600000005"};
-    QStringList salaires = {"35000", "32000", "38000", "45000", "50000"};
-    
-    for (int i = 0; i < 5; ++i) {
-        table->setItem(i, 0, new QTableWidgetItem(ids[i]));
-        table->setItem(i, 1, new QTableWidgetItem(noms[i]));
-        table->setItem(i, 2, new QTableWidgetItem(postes[i]));
-        table->setItem(i, 3, new QTableWidgetItem(emails[i]));
-        table->setItem(i, 4, new QTableWidgetItem(tels[i]));
-        table->setItem(i, 5, new QTableWidgetItem(salaires[i] + " TND"));
-        
-        QPushButton* btnEdit = new QPushButton("✏️");
-        btnEdit->setToolTip("Edit");
-        btnEdit->setStyleSheet(
-            "QPushButton { "
-            "background-color: #2196F3; "
-            "color: white; "
-            "border: none; "
-            "border-radius: 5px; "
-            "padding: 5px 10px; "
-            "font-weight: bold; "
-            "} "
-            "QPushButton:hover { "
-            "background-color: #1976D2; "
-            "} "
-            "QPushButton:pressed { "
-            "background-color: #1565C0; "
-            "}"
-        );
-        btnEdit->setMaximumWidth(40);
-        connect(btnEdit, &QPushButton::clicked, this, [this, i]() {
-            onEditEmployeeClicked(i);
-        });
-        table->setCellWidget(i, 6, btnEdit);
-        
-        QPushButton* btnDelete = new QPushButton("🗑️");
-        btnDelete->setToolTip("Delete");
-        btnDelete->setStyleSheet(
-            "QPushButton { "
-            "background-color: #F44336; "
-            "color: white; "
-            "border: none; "
-            "border-radius: 5px; "
-            "padding: 5px 10px; "
-            "font-weight: bold; "
-            "} "
-            "QPushButton:hover { "
-            "background-color: #E53935; "
-            "} "
-            "QPushButton:pressed { "
-            "background-color: #D32F2F; "
-            "}"
-        );
-        btnDelete->setMaximumWidth(40);
-        connect(btnDelete, &QPushButton::clicked, this, [this, i]() {
-            onDeleteEmployeeClicked(i);
-        });
-        table->setCellWidget(i, 7, btnDelete);
-    }
-    
+    table->setRowCount(0);
     table->setColumnHidden(0, true);
 }
 
@@ -153,7 +89,7 @@ void MainWindow::setupConnections()
     connect(ui->btnEmployees, &QPushButton::clicked, this, &MainWindow::onShowEmployeesContent);
 }
 
-// Helper to hide employee-specific controls
+
 static void hideEmployeeControls(Ui::MainWindow *ui)
 {
     ui->statsBox->hide();
@@ -166,7 +102,7 @@ static void hideEmployeeControls(Ui::MainWindow *ui)
     ui->lineSearch->hide();
 }
 
-// Helper to show employee-specific controls
+
 static void showEmployeeControls(Ui::MainWindow *ui)
 {
     ui->statsBox->show();
@@ -205,7 +141,7 @@ void MainWindow::onShowDashboard()
     if (!navireWidget) navireWidget = new GestionNavires(this);
     if (!captureWidget) captureWidget = new GestionCaptures(this);
     if (!utilWidget) utilWidget = new GestionUtilisateurs(this);
-    // load latest data from DB into each gestion
+
     utilWidget->loadFromDb();
     navireWidget->loadFromDb();
     captureWidget->loadFromDb();
@@ -251,7 +187,7 @@ void MainWindow::onShowCaptures()
         currentModuleWidget->hide();
     }
     hideEmployeeControls(ui);
-    // Ensure DB connection is attempted so the captures view can load DB data
+
     Connection conn;
     if (conn.createconnect()) {
         captureWidget->loadFromDb();
@@ -303,7 +239,7 @@ void MainWindow::onLoginClicked()
         return;
     }
     
-    // After successful login, go directly to the Employees page and show the Dashboard
+
     showEmployeesPage();
     onShowDashboard();
 }
@@ -324,6 +260,29 @@ void MainWindow::onLogoutClicked()
     }
 }
 
+QString MainWindow::generateNextEmployeeId()
+{
+    QTableWidget* table = ui->tableEmployees;
+    int maxNum = 0;
+    
+
+    for (int row = 0; row < table->rowCount(); ++row) {
+        QTableWidgetItem* item = table->item(row, 0);
+        if (item) {
+            QString id = item->text();
+            if (id.startsWith("E")) {
+                bool ok;
+                int num = id.mid(1).toInt(&ok);
+                if (ok && num > maxNum) {
+                    maxNum = num;
+                }
+            }
+        }
+    }
+    
+    return "E" + QString::number(maxNum + 1);
+}
+
 void MainWindow::onAddEmployeeClicked()
 {
     AddEditEmployeeDialog dialog(this, false);
@@ -331,37 +290,47 @@ void MainWindow::onAddEmployeeClicked()
         QTableWidget* table = ui->tableEmployees;
         if (!table) return;
         
-        int newRow = table->rowCount();
-        table->insertRow(newRow);
+
+        QSqlDatabase db = QSqlDatabase::database();
+        if (!db.isOpen()) {
+            Connection conn;
+            if (!conn.createconnect()) {
+                QMessageBox::warning(this, "DB Connection", "Failed to connect to database. Employee not saved.");
+                return;
+            }
+            db = QSqlDatabase::database();
+        }
+
+        if (!db.transaction()) {
+            qDebug() << "Failed to start transaction for INSERT:" << db.lastError().text();
+        }
         
-        table->setItem(newRow, 0, new QTableWidgetItem(dialog.getId()));
-        table->setItem(newRow, 1, new QTableWidgetItem(dialog.getNom()));
-        table->setItem(newRow, 2, new QTableWidgetItem(dialog.getPoste()));
-        table->setItem(newRow, 3, new QTableWidgetItem(dialog.getEmail()));
-        table->setItem(newRow, 4, new QTableWidgetItem(dialog.getTelephone()));
-        table->setItem(newRow, 5, new QTableWidgetItem(QString::number(dialog.getSalaire(), 'f', 0) + " TND"));
+
+        QString newId = generateNextEmployeeId();
         
-        QPushButton* btnEdit = new QPushButton("✏️");
-        btnEdit->setMaximumWidth(40);
-        btnEdit->setStyleSheet(
-            "QPushButton { background-color: #2196F3; color: white; border: none; border-radius: 5px; padding: 5px 10px; }"
-        );
-        connect(btnEdit, &QPushButton::clicked, this, [this, newRow]() {
-            onEditEmployeeClicked(newRow);
-        });
-        table->setCellWidget(newRow, 6, btnEdit);
+        QSqlQuery query(db);
+        query.prepare("INSERT INTO employes (id, nom, poste, email, telephone, salaire) VALUES (?, ?, ?, ?, ?, ?)");
+        query.addBindValue(newId);
+        query.addBindValue(dialog.getNom());
+        query.addBindValue(dialog.getPoste());
+        query.addBindValue(dialog.getEmail());
+        query.addBindValue(dialog.getTelephone());
+        query.addBindValue(dialog.getSalaire());
         
-        // Delete button
-        QPushButton* btnDelete = new QPushButton("🗑️");
-        btnDelete->setMaximumWidth(40);
-        btnDelete->setStyleSheet(
-            "QPushButton { background-color: #F44336; color: white; border: none; border-radius: 5px; padding: 5px 10px; }"
-        );
-        connect(btnDelete, &QPushButton::clicked, this, [this, newRow]() {
-            onDeleteEmployeeClicked(newRow);
-        });
-        table->setCellWidget(newRow, 7, btnDelete);
+        if (!query.exec()) {
+            QMessageBox::critical(this, "DB Error", "Failed to add employee: " + query.lastError().text());
+            db.rollback();
+            return;
+        }
         
+        if (!db.commit()) {
+            QMessageBox::critical(this, "DB Error", "Failed to commit changes to database");
+            db.rollback();
+            return;
+        }
+        
+
+        loadEmployeesFromDb();
         updateEmployeeStats();
         updateSalaryStats();
         QMessageBox::information(this, "Success", "Employee added successfully!");
@@ -387,6 +356,50 @@ void MainWindow::onEditEmployeeClicked(int row)
     dialog.setEmployeeData(id, nom, poste, email, telephone, salary);
     
     if (dialog.exec() == QDialog::Accepted) {
+
+        QSqlDatabase db = QSqlDatabase::database();
+        if (!db.isOpen()) {
+            Connection conn;
+            if (!conn.createconnect()) {
+                QMessageBox::warning(this, "DB Connection", "Failed to connect to database. Changes not saved.");
+                return;
+            }
+            db = QSqlDatabase::database();
+        }
+        
+        QString idStr = id.trimmed();
+        if (idStr.isEmpty()) {
+            QMessageBox::warning(this, "Error", "Invalid employee ID");
+            return;
+        }
+        
+        if (!db.transaction()) {
+            qDebug() << "Failed to start transaction for UPDATE:" << db.lastError().text();
+        }
+        QSqlQuery query(db);
+        query.prepare("UPDATE employes SET nom = ?, poste = ?, email = ?, telephone = ?, salaire = ? WHERE id = ?");
+        query.addBindValue(dialog.getNom());
+        query.addBindValue(dialog.getPoste());
+        query.addBindValue(dialog.getEmail());
+        query.addBindValue(dialog.getTelephone());
+        query.addBindValue(dialog.getSalaire());
+        query.addBindValue(idStr);
+        
+        if (!query.exec()) {
+            QMessageBox::critical(this, "DB Error", "Failed to update employee: " + query.lastError().text());
+            db.rollback();
+            return;
+        }
+        int affected = query.numRowsAffected();
+        qDebug() << "Update rows affected:" << affected;
+        
+        if (!db.commit()) {
+            QMessageBox::critical(this, "DB Error", "Failed to commit update to database");
+            db.rollback();
+            return;
+        }
+        
+
         table->item(row, 1)->setText(dialog.getNom());
         table->item(row, 2)->setText(dialog.getPoste());
         table->item(row, 3)->setText(dialog.getEmail());
@@ -405,6 +418,7 @@ void MainWindow::onDeleteEmployeeClicked(int row)
     if (!table || row < 0 || row >= table->rowCount())
         return;
     
+    QString id = table->item(row, 0)->text();
     QString nom = table->item(row, 1)->text();
     QMessageBox::StandardButton reply = QMessageBox::question(
         this,
@@ -414,7 +428,61 @@ void MainWindow::onDeleteEmployeeClicked(int row)
     );
     
     if (reply == QMessageBox::Yes) {
+
+        QSqlDatabase db = QSqlDatabase::database();
+        if (!db.isOpen()) {
+            Connection conn;
+            if (!conn.createconnect()) {
+                QMessageBox::warning(this, "DB Connection", "Failed to connect to database. Employee not deleted.");
+                return;
+            }
+            db = QSqlDatabase::database();
+        }
+        if (!db.transaction()) {
+            qDebug() << "Failed to start transaction for DELETE:" << db.lastError().text();
+        }
+        
+        if (!table->item(row, 0)) {
+            QMessageBox::warning(this, "Error", "Invalid employee data");
+            return;
+        }
+        
+        QString idStr = table->item(row, 0)->text().trimmed();
+        if (idStr.isEmpty()) {
+            QMessageBox::warning(this, "Error", "Invalid employee ID");
+            return;
+        }
+        
+        qDebug() << "Deleting employee with ID:" << idStr;
+        
+        QSqlQuery query(db);
+        query.prepare("DELETE FROM employes WHERE id = ?");
+        query.addBindValue(idStr);
+        
+        if (!query.exec()) {
+            QMessageBox::critical(this, "DB Error", "Failed to delete employee: " + query.lastError().text());
+            qDebug() << "Delete query failed. Bound value was:" << idStr;
+            return;
+        }
+        
+        qDebug() << "Delete query executed successfully. Rows affected:" << query.numRowsAffected();
+        
+        if (!db.commit()) {
+            QMessageBox::critical(this, "DB Error", "Failed to commit deletion to database:" + db.lastError().text());
+            qDebug() << "Commit failed:" << db.lastError().text();
+            return;
+        }
+        
+        qDebug() << "Commit successful";
+        
+
         table->removeRow(row);
+        updateEmployeeStats();
+        updateSalaryStats();
+        
+
+        qDebug() << "Reloading employees from database after deletion";
+        loadEmployeesFromDb();
         updateEmployeeStats();
         updateSalaryStats();
         QMessageBox::information(this, "Success", "Employee deleted successfully!");
@@ -428,7 +496,7 @@ void MainWindow::onSearchEmployees(const QString &text)
     
     for (int i = 0; i < table->rowCount(); ++i) {
         bool match = false;
-        for (int j = 0; j < table->columnCount() - 2; ++j) { // Skip edit/delete columns
+        for (int j = 0; j < table->columnCount() - 2; ++j) {
             QTableWidgetItem* item = table->item(i, j);
             if (item && item->text().contains(text, Qt::CaseInsensitive)) {
                 match = true;
@@ -444,43 +512,43 @@ void MainWindow::loadEmployeesFromDb()
     QTableWidget* table = ui->tableEmployees;
     if (!table) return;
     
-    // Open database connection
+
     Connection conn;
     if (!conn.createconnect()) {
         qDebug() << "Failed to connect to database for employee loading";
         return;
     }
     
-    // Clear existing rows
+
     table->setRowCount(0);
     
-    // Execute SQL query to fetch employees
+
     QSqlQuery query;
     if (!query.exec("SELECT id, nom, poste, email, telephone, salaire FROM employes ORDER BY id")) {
         qDebug() << "Error loading employees:" << query.lastError().text();
         return;
     }
     
-    // Populate table from database results
+
     int rowCount = 0;
     while (query.next()) {
         table->insertRow(rowCount);
         
-        int id = query.value(0).toInt();
+        QString id = query.value(0).toString();
         QString nom = query.value(1).toString();
         QString poste = query.value(2).toString();
         QString email = query.value(3).toString();
         QString telephone = query.value(4).toString();
         double salaire = query.value(5).toDouble();
         
-        table->setItem(rowCount, 0, new QTableWidgetItem(QString::number(id)));
+        table->setItem(rowCount, 0, new QTableWidgetItem(id));
         table->setItem(rowCount, 1, new QTableWidgetItem(nom));
         table->setItem(rowCount, 2, new QTableWidgetItem(poste));
         table->setItem(rowCount, 3, new QTableWidgetItem(email));
         table->setItem(rowCount, 4, new QTableWidgetItem(telephone));
         table->setItem(rowCount, 5, new QTableWidgetItem(QString::number(salaire, 'f', 2) + " TND"));
         
-        // Add Edit button
+
         QPushButton* btnEdit = new QPushButton("✏️");
         btnEdit->setToolTip("Edit");
         btnEdit->setStyleSheet(
@@ -499,10 +567,19 @@ void MainWindow::loadEmployeesFromDb()
             "background-color: #1565C0; "
             "}"
         );
-        connect(btnEdit, &QPushButton::clicked, [this, rowCount]() { onEditEmployeeClicked(rowCount); });
+        connect(btnEdit, &QPushButton::clicked, [this, id]() { 
+            QTableWidget* table = ui->tableEmployees;
+            for (int i = 0; i < table->rowCount(); ++i) {
+                QTableWidgetItem* item = table->item(i, 0);
+                if (item && item->text() == id) {
+                    onEditEmployeeClicked(i);
+                    return;
+                }
+            }
+        });
         table->setCellWidget(rowCount, 6, btnEdit);
         
-        // Add Delete button
+
         QPushButton* btnDelete = new QPushButton("🗑️");
         btnDelete->setToolTip("Delete");
         btnDelete->setStyleSheet(
@@ -521,7 +598,16 @@ void MainWindow::loadEmployeesFromDb()
             "background-color: #BA0000; "
             "}"
         );
-        connect(btnDelete, &QPushButton::clicked, [this, rowCount]() { onDeleteEmployeeClicked(rowCount); });
+        connect(btnDelete, &QPushButton::clicked, [this, id]() { 
+            QTableWidget* table = ui->tableEmployees;
+            for (int i = 0; i < table->rowCount(); ++i) {
+                QTableWidgetItem* item = table->item(i, 0);
+                if (item && item->text() == id) {
+                    onDeleteEmployeeClicked(i);
+                    return;
+                }
+            }
+        });
         table->setCellWidget(rowCount, 7, btnDelete);
         
         rowCount++;
@@ -857,12 +943,12 @@ void MainWindow::generateAnalyticsPDF()
     int totalEmployees = table->rowCount();
     double averageSalary = totalEmployees > 0 ? totalSalary / totalEmployees : 0;
     
-    // TITLE
+
     painter.setFont(titleFont);
     painter.drawText(margin, y, pageWidth - 2*margin, 50, Qt::AlignCenter, "Employee Analytics Report");
     y += 60;
     
-    // DATE
+
     painter.setFont(normalFont);
     painter.drawText(margin, y, pageWidth - 2*margin, 30, Qt::AlignCenter,
                      "Generated: " + QDateTime::currentDateTime().toString("dd/MM/yyyy hh:mm"));

@@ -6,18 +6,28 @@ Connection::Connection()
 }
 
 bool Connection::createconnect()
-{bool test=false;
+{
+    // Check if default connection exists and is open
+    if (QSqlDatabase::contains()) {
+        QSqlDatabase db = QSqlDatabase::database();
+        if (db.isOpen()) {
+            qDebug() << "Connection already open";
+            return true;
+        }
+    }
+    
+    // Create new connection
     QSqlDatabase db = QSqlDatabase::addDatabase("QODBC");
-    db.setDatabaseName("FishTech");//inserer le nom de la source de données
-    db.setUserName("DemniYoussef");//inserer nom de l'utilisateur
-    db.setPassword("Demni123");//inserer mot de passe de cet utilisateur
+    db.setDatabaseName("FishTech");
+    db.setUserName("DemniYoussef");
+    db.setPassword("Demni123");
 
-    if (db.open())
-        test=true;
-
-
-
-
-
-    return  test;
+    if (!db.open()) {
+        qDebug() << "Failed to open database:" << db.lastError().text();
+        return false;
+    }
+    
+    qDebug() << "Database connection successful";
+    return true;
 }
+

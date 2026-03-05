@@ -358,16 +358,6 @@ void GestionUtilisateurs::chargerEmployes()
     listeEmployes.clear();
 
     QFile file(m_jsonPath);
-    if (!file.exists()) {
-        listeEmployes.append(Employe("1", "Ali Ben Salem", "Pêcheur", "ali.ben@port.com", "0600000001", 35000));
-        listeEmployes.append(Employe("2", "Sara Khelifa", "Matelot", "sara.khelifa@port.com", "0600000002", 32000));
-        listeEmployes.append(Employe("3", "Omar Said", "Docker", "omar.said@port.com", "0600000003", 38000));
-        listeEmployes.append(Employe("4", "Lina Boudiaf", "Chef de quai", "lina.boudiaf@port.com", "0600000004", 45000));
-        listeEmployes.append(Employe("5", "Yassine Amrani", "Superviseur", "yassine.amrani@port.com", "0600000005", 50000));
-        sauvegarderEmployes();
-        return;
-    }
-
     if (!file.open(QIODevice::ReadOnly)) {
         QMessageBox::warning(this, "Erreur", "Impossible de lire le fichier de données.");
         return;
