@@ -32,8 +32,13 @@
 #include <QTextStream>
 #include <QDesktopServices>
 #include <QRegularExpression>
+#include <QSqlDatabase>
+#include <QSqlQuery>
+#include <QSqlError>
 #include <limits>
+
 #include "employe.h"
+#include "connection.h"
 
 class DialogEmploye : public QDialog
 {

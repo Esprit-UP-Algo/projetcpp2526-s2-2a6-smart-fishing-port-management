@@ -18,36 +18,72 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 CONFIG += c++11
 
-SOURCES += \
-    connection.cpp \
-    main.cpp \
-    mainwindow.cpp \
-    addedit_employeedialog.cpp \
-    forgotpassworddialog.cpp
+# Include paths for organized project structure
+INCLUDEPATH += \
+    $$PWD/database \
+    $$PWD/models \
+    $$PWD/dialogs \
+    $$PWD/modules/employeeManagement \
+    $$PWD/modules/authentication \
+    $$PWD/int7
 
-# int7 module sources (GestionQuai / GestionNavires / GestionCaptures / GestionUtilisateurs)
+# --- DATABASE LAYER ---
+SOURCES += \
+    database/connection.cpp
+
+HEADERS += \
+    database/connection.h \
+    database/constants.h
+
+# --- MODELS ---
+HEADERS += \
+    models/employe.h
+
+# --- DIALOGS ---
+SOURCES += \
+    dialogs/addedit_employeedialog.cpp \
+    dialogs/forgotpassworddialog.cpp
+
+HEADERS += \
+    dialogs/addedit_employeedialog.h \
+    dialogs/forgotpassworddialog.h
+
+# --- EMPLOYEE MANAGEMENT MODULE ---
+SOURCES += \
+    modules/employeeManagement/gestionutilisateurs.cpp
+
+HEADERS += \
+    modules/employeeManagement/gestionutilisateurs.h
+
+# --- AUTHENTICATION MODULE ---
+SOURCES += \
+    modules/authentication/sessionmanager.cpp
+
+HEADERS += \
+    modules/authentication/sessionmanager.h
+
+# --- MAIN APPLICATION ---
+SOURCES += \
+    main.cpp \
+    mainwindow.cpp
+
+HEADERS += \
+    mainwindow.h
+
+FORMS += \
+    mainwindow.ui
+
+# --- INT7 MODULES ---
 SOURCES += \
     int7/gestionquai.cpp \
     int7/gestionnavires.cpp \
-    int7/gestioncaptures.cpp \
-    int7/gestionutilisateurs.cpp
+    int7/gestioncaptures.cpp
 
-HEADERS += \
-    connection.h \
-    mainwindow.h \
-    addedit_employeedialog.h \
-    forgotpassworddialog.h
-
-# Headers for int7 modules
 HEADERS += \
     int7/gestionquai.h \
     int7/gestionnavires.h \
     int7/gestioncaptures.h \
-    int7/gestionutilisateurs.h
     int7/dashboard.h
-
-FORMS += \
-    mainwindow.ui
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin

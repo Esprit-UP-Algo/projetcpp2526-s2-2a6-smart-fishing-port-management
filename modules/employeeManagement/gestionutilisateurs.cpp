@@ -522,7 +522,6 @@ void GestionUtilisateurs::actualiserTable()
                         listeEmployes[i].email = dialog.getEmail().trimmed();
                         listeEmployes[i].telephone = dialog.getTelephone().trimmed();
                         listeEmployes[i].salaire = dialog.getSalaire();
-                        sauvegarderEmployes();
                         actualiserTable();
                         mettreAJourStatistiques();
                         mettreAJourStatistiquesSalaires();
@@ -545,7 +544,6 @@ void GestionUtilisateurs::actualiserTable()
                         break;
                     }
                 }
-                sauvegarderEmployes();
                 actualiserTable();
                 mettreAJourStatistiques();
                 mettreAJourStatistiquesSalaires();
@@ -638,7 +636,6 @@ void GestionUtilisateurs::ajouterEmploye()
         e.salaire = dialog.getSalaire();
 
         listeEmployes.append(e);
-        sauvegarderEmployes();
         actualiserTable();
         mettreAJourStatistiques();
         mettreAJourStatistiquesSalaires();
@@ -694,7 +691,6 @@ void GestionUtilisateurs::modifierEmploye()
                 listeEmployes[i].email = dialog.getEmail().trimmed();
                 listeEmployes[i].telephone = dialog.getTelephone().trimmed();
                 listeEmployes[i].salaire = dialog.getSalaire();
-                sauvegarderEmployes();
                 actualiserTable();
                 mettreAJourStatistiques();
                 mettreAJourStatistiquesSalaires();
@@ -732,9 +728,6 @@ void GestionUtilisateurs::supprimerEmploye()
                 break;
             }
         }
-        sauvegarderEmployes();
-        actualiserTable();
-        mettreAJourStatistiques();
         mettreAJourStatistiquesSalaires();
         QMessageBox::information(this, "✅ Succès", QString("Employé '%1' supprimé avec succès !").arg(nom));
     }

@@ -2,12 +2,13 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
-#include "addedit_employeedialog.h"
+#include "dialogs/addedit_employeedialog.h"
 #include "int7/gestionquai.h"
 #include "int7/gestionnavires.h"
 #include "int7/gestioncaptures.h"
 #include "int7/dashboard.h"
-#include "int7/gestionutilisateurs.h"
+#include "modules/employeeManagement/gestionutilisateurs.h"
+#include "modules/authentication/sessionmanager.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -58,6 +59,8 @@ private:
     void updateSalaryStats();
     void generateAnalyticsPDF();
     QString generateNextEmployeeId();
+    void initializePageVisibility();
+    void updateMenuForRole();
 
     QString analyticsStatsText;
     void* analyticsPieChart = nullptr;

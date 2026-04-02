@@ -1,7 +1,7 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
-#include "addedit_employeedialog.h"
-#include "forgotpassworddialog.h"
+#include "dialogs/addedit_employeedialog.h"
+#include "dialogs/forgotpassworddialog.h"
 #include <QTableWidget>
 #include <QTableWidgetItem>
 #include <QHeaderView>
@@ -28,7 +28,10 @@
 #include <QPdfWriter>
 #include <QFileDialog>
 #include <QDateTime>
+#include <QLineSeries>
+#include <QSqlRecord>
 #include <QPageSize>
+#include <QCryptographicHash>
 #include <QSqlQuery>
 #include <QSqlError>
 #include <QSqlDatabase>
@@ -228,20 +231,104 @@ void MainWindow::showEmployeesPage()
     updateSalaryStats();
 }
 
+void MainWindow::initializePageVisibility()
+{
+    SessionManager &session = SessionManager::getInstance();
+    
+    // Hide all navigation buttons by default
+    ui->btnEmployees->setVisible(false);
+    ui->btnCaptures->setVisible(false);
+    ui->btnShips->setVisible(false);
+    ui->btnQuais->setVisible(false);
+    ui->btnAnalytics->setVisible(false);
+    ui->btnDashboard->setVisible(false);
+    
+    // Show buttons based on accessible pages
+    QList<SessionManager::AccessPage> pages = session.getAccessiblePages();
+    
+    for (auto page : pages) {
+        switch (page) {
+            case SessionManager::PageEmployees:
+                ui->btnEmployees->setVisible(true);
+                break;
+            case SessionManager::PageCaptures:
+                ui->btnCaptures->setVisible(true);
+                break;
+            case SessionManager::PageNavires:
+                ui->btnShips->setVisible(true);
+                break;
+            case SessionManager::PageQuai:
+                ui->btnQuais->setVisible(true);
+                break;
+            case SessionManager::PageAnalytics:
+                ui->btnAnalytics->setVisible(true);
+                break;
+            case SessionManager::PageDashboard:
+                ui->btnDashboard->setVisible(true);
+                break;
+            default:
+                break;
+        }
+    }
+}
+
+void MainWindow::updateMenuForRole()
+{
+    SessionManager &session = SessionManager::getInstance();
+    QString role = session.getCurrentRoleString();
+    QString user = session.getCurrentUser().nom;
+    
+    // Update title bar with role information
+    this->setWindowTitle(QString("FishTech - %1 (%2)").arg(user, role));
+    
+    // Update label showing current user
+    ui->labelTitle->setText(QString("connecté en tant que: %1").arg(role));
+}
+
 
 void MainWindow::onLoginClicked()
 {
-    QString username = ui->lineUsername->text();
+    QString username = ui->lineUsername->text().trimmed();
     QString password = ui->linePassword->text();
     
+    // Remove any surrounding quotes that might have been added
+    if (password.startsWith('"') && password.endsWith('"')) {
+        password = password.mid(1, password.length() - 2);
+    }
+    if (password.startsWith("'") && password.endsWith("'")) {
+        password = password.mid(1, password.length() - 2);
+    }
+    password = password.trimmed();
+    
     if (username.isEmpty() || password.isEmpty()) {
-        QMessageBox::warning(this, "Error", "Please enter username and password");
+        QMessageBox::warning(this, "❌ Login Failed", "Please enter username and password");
         return;
     }
     
-
+    // Attempt authentication using SessionManager
+    SessionManager &session = SessionManager::getInstance();
+    if (!session.authenticate(username, password)) {
+        // Show error with debug info
+        QMessageBox::warning(this, "❌ Login Failed", 
+            QString("Invalid credentials for: %1\n\n"
+                   "Password: %2\n\n"
+                   "Check the Output panel for the SQL command to fix the database.\n"
+                   "Or verify that PASSWORD_HASH column has the correct hash.").arg(username, password));
+        ui->linePassword->clear();
+        return;
+    }
+    
+    // Authentication successful
+    Employe user = session.getCurrentUser();
+    QMessageBox::information(this, "✅ Login Successful", 
+                           QString("Welcome %1 (%2)!").arg(user.nom, session.getCurrentRoleString()));
+    
+    // Initialize page visibility based on role
+    initializePageVisibility();
+    updateMenuForRole();
+    
+    // Navigate to dashboard or appropriate page
     showEmployeesPage();
-    onShowDashboard();
 }
 
 void MainWindow::onForgotPasswordClicked()
@@ -256,7 +343,16 @@ void MainWindow::onLogoutClicked()
 {
     QMessageBox::StandardButton reply = QMessageBox::question(this, "Logout", "Are you sure you want to logout?");
     if (reply == QMessageBox::Yes) {
+        // Clear session
+        SessionManager::getInstance().logout();
+        
+        // Reset UI
+        this->setWindowTitle("FishTech");
+        ui->labelTitle->setText("Not logged in");
+        
+        // Return to login page
         showLoginPage();
+        QMessageBox::information(this, "✅ Logged Out", "You have been successfully logged out.");
     }
 }
 
@@ -286,6 +382,21 @@ QString MainWindow::generateNextEmployeeId()
 void MainWindow::onAddEmployeeClicked()
 {
     AddEditEmployeeDialog dialog(this, false);
+    
+    // Collecter les emails et téléphones existants
+    QStringList existingEmails, existingPhones;
+    if (ui->tableEmployees) {
+        for (int i = 0; i < ui->tableEmployees->rowCount(); ++i) {
+            QTableWidgetItem* emailItem = ui->tableEmployees->item(i, 3);
+            QTableWidgetItem* phoneItem = ui->tableEmployees->item(i, 4);
+            if (emailItem) existingEmails << emailItem->text();
+            if (phoneItem) existingPhones << phoneItem->text();
+        }
+    }
+    
+    dialog.setExistingEmails(existingEmails);
+    dialog.setExistingPhones(existingPhones);
+    
     if (dialog.exec() == QDialog::Accepted) {
         QTableWidget* table = ui->tableEmployees;
         if (!table) return;
@@ -295,7 +406,7 @@ void MainWindow::onAddEmployeeClicked()
         if (!db.isOpen()) {
             Connection conn;
             if (!conn.createconnect()) {
-                QMessageBox::warning(this, "DB Connection", "Failed to connect to database. Employee not saved.");
+                QMessageBox::warning(this, "❌ Erreur de connexion", "Impossible de se connecter à la base de données. Employé non enregistré.");
                 return;
             }
             db = QSqlDatabase::database();
@@ -309,22 +420,33 @@ void MainWindow::onAddEmployeeClicked()
         QString newId = generateNextEmployeeId();
         
         QSqlQuery query(db);
-        query.prepare("INSERT INTO employes (id, nom, poste, email, telephone, salaire) VALUES (?, ?, ?, ?, ?, ?)");
+        QString passwordHash;
+        QString inputPassword = dialog.getPassword().trimmed();
+        if (!inputPassword.isEmpty()) {
+            passwordHash = QString(QCryptographicHash::hash(inputPassword.toUtf8(), QCryptographicHash::Sha256).toHex());
+        } else {
+            // Use default old hash if no password provided (should not happen for add mode as validation ensures password)
+            passwordHash = "482c811da5d5b4bc6d497ffa98491e38";
+        }
+
+        query.prepare("INSERT INTO employes (id, nom, poste, email, telephone, salaire, genre, password_hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
         query.addBindValue(newId);
         query.addBindValue(dialog.getNom());
         query.addBindValue(dialog.getPoste());
         query.addBindValue(dialog.getEmail());
         query.addBindValue(dialog.getTelephone());
         query.addBindValue(dialog.getSalaire());
+        query.addBindValue(dialog.getGenre());
+        query.addBindValue(passwordHash);
         
         if (!query.exec()) {
-            QMessageBox::critical(this, "DB Error", "Failed to add employee: " + query.lastError().text());
+            QMessageBox::critical(this, "❌ Erreur BD", "Échec de l'ajout de l'employé: " + query.lastError().text());
             db.rollback();
             return;
         }
         
         if (!db.commit()) {
-            QMessageBox::critical(this, "DB Error", "Failed to commit changes to database");
+            QMessageBox::critical(this, "❌ Erreur BD", "Impossible de valider les modifications");
             db.rollback();
             return;
         }
@@ -333,7 +455,7 @@ void MainWindow::onAddEmployeeClicked()
         loadEmployeesFromDb();
         updateEmployeeStats();
         updateSalaryStats();
-        QMessageBox::information(this, "Success", "Employee added successfully!");
+        QMessageBox::information(this, "✅ Succès", "Employé ajouté avec succès !");
     }
 }
 
@@ -352,16 +474,49 @@ void MainWindow::onEditEmployeeClicked(int row)
     salaryText.replace(" TND", "");
     double salary = salaryText.toDouble();
     
+    // Fetch genre from database
+    QString genre = "M";
+    QSqlDatabase db = QSqlDatabase::database();
+    if (!db.isOpen()) {
+        Connection conn;
+        if (conn.createconnect()) {
+            db = QSqlDatabase::database();
+        }
+    }
+    
+    if (db.isOpen()) {
+        QSqlQuery query(db);
+        if (query.exec(QString("SELECT genre FROM employes WHERE id = '%1'").arg(id))) {
+            if (query.next()) {
+                genre = query.value(0).toString();
+            }
+        }
+    }
+    
     AddEditEmployeeDialog dialog(this, true);
-    dialog.setEmployeeData(id, nom, poste, email, telephone, salary);
+    
+    // Collecter les emails et téléphones existants (sauf celui en cours d'édition)
+    QStringList existingEmails, existingPhones;
+    for (int i = 0; i < table->rowCount(); ++i) {
+        if (i != row) { // Exclure la ligne courante
+            QTableWidgetItem* emailItem = table->item(i, 3);
+            QTableWidgetItem* phoneItem = table->item(i, 4);
+            if (emailItem) existingEmails << emailItem->text();
+            if (phoneItem) existingPhones << phoneItem->text();
+        }
+    }
+    
+    dialog.setExistingEmails(existingEmails);
+    dialog.setExistingPhones(existingPhones);
+    
+    dialog.setEmployeeData(id, nom, poste, email, telephone, salary, genre);
     
     if (dialog.exec() == QDialog::Accepted) {
 
-        QSqlDatabase db = QSqlDatabase::database();
         if (!db.isOpen()) {
             Connection conn;
             if (!conn.createconnect()) {
-                QMessageBox::warning(this, "DB Connection", "Failed to connect to database. Changes not saved.");
+                QMessageBox::warning(this, "❌ Erreur de connexion", "Impossible de se connecter à la base de données. Changements non enregistrés.");
                 return;
             }
             db = QSqlDatabase::database();
@@ -369,7 +524,7 @@ void MainWindow::onEditEmployeeClicked(int row)
         
         QString idStr = id.trimmed();
         if (idStr.isEmpty()) {
-            QMessageBox::warning(this, "Error", "Invalid employee ID");
+            QMessageBox::warning(this, "❌ Erreur", "ID d'employé invalide");
             return;
         }
         
@@ -377,16 +532,31 @@ void MainWindow::onEditEmployeeClicked(int row)
             qDebug() << "Failed to start transaction for UPDATE:" << db.lastError().text();
         }
         QSqlQuery query(db);
-        query.prepare("UPDATE employes SET nom = ?, poste = ?, email = ?, telephone = ?, salaire = ? WHERE id = ?");
-        query.addBindValue(dialog.getNom());
-        query.addBindValue(dialog.getPoste());
-        query.addBindValue(dialog.getEmail());
-        query.addBindValue(dialog.getTelephone());
-        query.addBindValue(dialog.getSalaire());
-        query.addBindValue(idStr);
+        QString newPassword = dialog.getPassword().trimmed();
+        if (!newPassword.isEmpty()) {
+            QString passwordHash = QString(QCryptographicHash::hash(newPassword.toUtf8(), QCryptographicHash::Sha256).toHex());
+            query.prepare("UPDATE employes SET nom = ?, poste = ?, email = ?, telephone = ?, salaire = ?, genre = ?, password_hash = ? WHERE id = ?");
+            query.addBindValue(dialog.getNom());
+            query.addBindValue(dialog.getPoste());
+            query.addBindValue(dialog.getEmail());
+            query.addBindValue(dialog.getTelephone());
+            query.addBindValue(dialog.getSalaire());
+            query.addBindValue(dialog.getGenre());
+            query.addBindValue(passwordHash);
+            query.addBindValue(idStr);
+        } else {
+            query.prepare("UPDATE employes SET nom = ?, poste = ?, email = ?, telephone = ?, salaire = ?, genre = ? WHERE id = ?");
+            query.addBindValue(dialog.getNom());
+            query.addBindValue(dialog.getPoste());
+            query.addBindValue(dialog.getEmail());
+            query.addBindValue(dialog.getTelephone());
+            query.addBindValue(dialog.getSalaire());
+            query.addBindValue(dialog.getGenre());
+            query.addBindValue(idStr);
+        }
         
         if (!query.exec()) {
-            QMessageBox::critical(this, "DB Error", "Failed to update employee: " + query.lastError().text());
+            QMessageBox::critical(this, "❌ Erreur BD", "Échec de la modification: " + query.lastError().text());
             db.rollback();
             return;
         }
@@ -394,7 +564,7 @@ void MainWindow::onEditEmployeeClicked(int row)
         qDebug() << "Update rows affected:" << affected;
         
         if (!db.commit()) {
-            QMessageBox::critical(this, "DB Error", "Failed to commit update to database");
+            QMessageBox::critical(this, "❌ Erreur BD", "Impossible de valider les modifications");
             db.rollback();
             return;
         }
@@ -408,7 +578,7 @@ void MainWindow::onEditEmployeeClicked(int row)
         
         updateEmployeeStats();
         updateSalaryStats();
-        QMessageBox::information(this, "Success", "Employee updated successfully!");
+        QMessageBox::information(this, "✅ Succès", "Employé modifié avec succès !");
     }
 }
 
@@ -420,20 +590,24 @@ void MainWindow::onDeleteEmployeeClicked(int row)
     
     QString id = table->item(row, 0)->text();
     QString nom = table->item(row, 1)->text();
-    QMessageBox::StandardButton reply = QMessageBox::question(
-        this,
-        "Confirm Delete",
-        QString("Are you sure you want to delete %1?").arg(nom),
-        QMessageBox::Yes | QMessageBox::No
-    );
+    QString poste = table->item(row, 2)->text();
     
-    if (reply == QMessageBox::Yes) {
+    QMessageBox msgBox(QMessageBox::Warning, "⚠️ Confirmation de suppression",
+                       QString("Êtes-vous sûr de vouloir supprimer cet employé ?\n\n"
+                              "ID: %1\n"
+                              "Nom: %2\n"
+                              "Poste: %3\n\n"
+                              "Cette action est irréversible.").arg(id, nom, poste),
+                       QMessageBox::Yes | QMessageBox::No);
+    msgBox.setDefaultButton(QMessageBox::No);
+    
+    if (msgBox.exec() == QMessageBox::Yes) {
 
         QSqlDatabase db = QSqlDatabase::database();
         if (!db.isOpen()) {
             Connection conn;
             if (!conn.createconnect()) {
-                QMessageBox::warning(this, "DB Connection", "Failed to connect to database. Employee not deleted.");
+                QMessageBox::warning(this, "❌ Erreur de connexion", "Impossible de se connecter à la base de données. Employé non supprimé.");
                 return;
             }
             db = QSqlDatabase::database();
@@ -443,13 +617,13 @@ void MainWindow::onDeleteEmployeeClicked(int row)
         }
         
         if (!table->item(row, 0)) {
-            QMessageBox::warning(this, "Error", "Invalid employee data");
+            QMessageBox::warning(this, "❌ Erreur", "Données d'employé invalides");
             return;
         }
         
         QString idStr = table->item(row, 0)->text().trimmed();
         if (idStr.isEmpty()) {
-            QMessageBox::warning(this, "Error", "Invalid employee ID");
+            QMessageBox::warning(this, "❌ Erreur", "ID d'employé invalide");
             return;
         }
         
@@ -460,16 +634,18 @@ void MainWindow::onDeleteEmployeeClicked(int row)
         query.addBindValue(idStr);
         
         if (!query.exec()) {
-            QMessageBox::critical(this, "DB Error", "Failed to delete employee: " + query.lastError().text());
+            QMessageBox::critical(this, "❌ Erreur BD", "Échec de la suppression: " + query.lastError().text());
             qDebug() << "Delete query failed. Bound value was:" << idStr;
+            db.rollback();
             return;
         }
         
         qDebug() << "Delete query executed successfully. Rows affected:" << query.numRowsAffected();
         
         if (!db.commit()) {
-            QMessageBox::critical(this, "DB Error", "Failed to commit deletion to database:" + db.lastError().text());
+            QMessageBox::critical(this, "❌ Erreur BD", "Impossible de valider la suppression:" + db.lastError().text());
             qDebug() << "Commit failed:" << db.lastError().text();
+            db.rollback();
             return;
         }
         
@@ -485,7 +661,7 @@ void MainWindow::onDeleteEmployeeClicked(int row)
         loadEmployeesFromDb();
         updateEmployeeStats();
         updateSalaryStats();
-        QMessageBox::information(this, "Success", "Employee deleted successfully!");
+        QMessageBox::information(this, "✅ Succès", QString("Employé '%1' supprimé avec succès !").arg(nom));
     }
 }
 
@@ -494,17 +670,27 @@ void MainWindow::onSearchEmployees(const QString &text)
     QTableWidget* table = ui->tableEmployees;
     if (!table) return;
     
+    int visibleCount = 0;
+    QString searchText = text.trimmed().toLower();
+    
     for (int i = 0; i < table->rowCount(); ++i) {
-        bool match = false;
-        for (int j = 0; j < table->columnCount() - 2; ++j) {
-            QTableWidgetItem* item = table->item(i, j);
-            if (item && item->text().contains(text, Qt::CaseInsensitive)) {
-                match = true;
-                break;
+        bool match = searchText.isEmpty(); // Si recherche vide, afficher tous
+        
+        if (!match) {
+            for (int j = 0; j < table->columnCount() - 1; ++j) { // Exclure colonne Actions
+                QTableWidgetItem* item = table->item(i, j);
+                if (item && item->text().toLower().contains(searchText, Qt::CaseInsensitive)) {
+                    match = true;
+                    break;
+                }
             }
         }
+        
         table->setRowHidden(i, !match);
+        if (match) visibleCount++;
     }
+    
+    qDebug() << "Recherche:" << text << "- Résultats:" << visibleCount << "/" << table->rowCount();
 }
 
 void MainWindow::loadEmployeesFromDb()
@@ -524,9 +710,12 @@ void MainWindow::loadEmployeesFromDb()
     
 
     QSqlQuery query;
-    if (!query.exec("SELECT id, nom, poste, email, telephone, salaire FROM employes ORDER BY id")) {
-        qDebug() << "Error loading employees:" << query.lastError().text();
-        return;
+    if (!query.exec("SELECT id, nom, poste, email, telephone, salaire, genre FROM employes ORDER BY id")) {
+        // Try without genre column for backwards compatibility
+        if (!query.exec("SELECT id, nom, poste, email, telephone, salaire FROM employes ORDER BY id")) {
+            qDebug() << "Error loading employees:" << query.lastError().text();
+            return;
+        }
     }
     
 
@@ -540,6 +729,7 @@ void MainWindow::loadEmployeesFromDb()
         QString email = query.value(3).toString();
         QString telephone = query.value(4).toString();
         double salaire = query.value(5).toDouble();
+        QString genre = query.record().count() > 6 ? query.value(6).toString() : "M";
         
         table->setItem(rowCount, 0, new QTableWidgetItem(id));
         table->setItem(rowCount, 1, new QTableWidgetItem(nom));
@@ -751,7 +941,14 @@ void MainWindow::onShowAnalytics()
     
     QVBoxLayout* layout = new QVBoxLayout(analyticsDialog);
     
-    QHBoxLayout* chartsLayout = new QHBoxLayout();
+    QLayout* chartsLayout;
+    QVBoxLayout* chartsMainLayout = new QVBoxLayout();
+    
+    QHBoxLayout* chartsLayoutRow1 = new QHBoxLayout();
+    QHBoxLayout* chartsLayoutRow2 = new QHBoxLayout();
+    
+    // Calculate total salary first for use in all charts
+    double totalSalary = 0.0;
     
     QMap<QString, double> salaryByPosition;
     for (int i = 0; i < table->rowCount(); ++i) {
@@ -759,6 +956,7 @@ void MainWindow::onShowAnalytics()
         QString salaryText = table->item(i, 5)->text().replace(" TND", "");
         double salary = salaryText.toDouble();
         salaryByPosition[poste] += salary;
+        totalSalary += salary;
     }
     
     QPieSeries* pieSeries = new QPieSeries();
@@ -781,7 +979,8 @@ void MainWindow::onShowAnalytics()
     
     QChartView* pieChartView = new QChartView(pieChart);
     pieChartView->setRenderHint(QPainter::Antialiasing);
-    pieChartView->setMinimumWidth(450);
+    pieChartView->setMinimumWidth(400);
+    pieChartView->setMaximumHeight(350);
     
     QMap<QString, int> positionCount;
     for (int i = 0; i < table->rowCount(); ++i) {
@@ -820,14 +1019,107 @@ void MainWindow::onShowAnalytics()
     
     QChartView* barChartView = new QChartView(barChart);
     barChartView->setRenderHint(QPainter::Antialiasing);
-    barChartView->setMinimumWidth(450);
+    barChartView->setMinimumWidth(400);
+    barChartView->setMaximumHeight(350);
     
-    chartsLayout->addWidget(pieChartView);
-    chartsLayout->addWidget(barChartView);
+    // Gender Parity Pie Chart
+    QMap<QString, int> genderCount;
+    for (int i = 0; i < table->rowCount(); ++i) {
+        // Try to read genre from database (6th column if available)
+        QString genre = "M";  // Default
+        // For now, we'll use default since genre column might not be in table display
+        genderCount[genre]++;
+    }
+    
+    // Better approach: Query database for gender info
+    QMap<QString, int> genderCountDb;
+    QSqlDatabase db = QSqlDatabase::database();
+    if (db.isOpen()) {
+        QSqlQuery query(db);
+        if (query.exec("SELECT genre FROM employes")) {
+            while (query.next()) {
+                QString genre = query.value(0).toString();
+                genderCountDb[genre.isEmpty() ? "M" : genre]++;
+            }
+        }
+    }
+    if (!genderCountDb.isEmpty()) {
+        genderCount = genderCountDb;
+    } else {
+        // Fallback: default all to M for now
+        genderCount["M"] = table->rowCount();
+    }
+    
+    QPieSeries* genderPieSeries = new QPieSeries();
+    QColor genderColors[] = {QColor(100, 150, 220), QColor(255, 100, 150)};  // Blue for M, Pink for F
+    int genderColorIdx = 0;
+    
+    for (auto it = genderCount.begin(); it != genderCount.end(); ++it) {
+        QString genderLabel = (it.key() == "F") ? "Female" : "Male";
+        int count = it.value();
+        double percentage = (static_cast<double>(count) / table->rowCount()) * 100.0;
+        QPieSlice* slice = genderPieSeries->append(
+            QString("%1: %2 (%3%)").arg(genderLabel).arg(count).arg(static_cast<int>(percentage)),
+            count
+        );
+        slice->setColor(genderColors[genderColorIdx % 2]);
+        genderColorIdx++;
+    }
+    
+    QChart* genderChart = new QChart();
+    genderChart->addSeries(genderPieSeries);
+    genderChart->setTitle("Employee Gender Parity");
+    genderChart->setAnimationOptions(QChart::SeriesAnimations);
+    
+    QChartView* genderChartView = new QChartView(genderChart);
+    genderChartView->setRenderHint(QPainter::Antialiasing);
+    genderChartView->setMinimumWidth(400);
+    genderChartView->setMaximumHeight(350);
+    
+    // Budget Trend Line Chart
+    QLineSeries* budgetSeries = new QLineSeries();
+    budgetSeries->setName("Monthly Budget");
+    
+    double dailyPayroll = totalSalary / 30.0;  // Estimate daily payroll
+    for (int month = 0; month < 12; ++month) {
+        double projectedBudget = totalSalary * (month + 1);
+        budgetSeries->append(month, projectedBudget);
+    }
+    
+    QChart* budgetChart = new QChart();
+    budgetChart->addSeries(budgetSeries);
+    budgetChart->setTitle("12-Month Budget Projection");
+    budgetChart->setAnimationOptions(QChart::SeriesAnimations);
+    
+    QValueAxis* budgetAxisX = new QValueAxis();
+    budgetAxisX->setLabelFormat("%i");
+    budgetAxisX->setRange(0, 11);
+    budgetAxisX->setTitleText("Month");
+    budgetChart->addAxis(budgetAxisX, Qt::AlignBottom);
+    budgetSeries->attachAxis(budgetAxisX);
+    
+    QValueAxis* budgetAxisY = new QValueAxis();
+    budgetAxisY->setTitleText("Cumulative Budget (TND)");
+    budgetChart->addAxis(budgetAxisY, Qt::AlignLeft);
+    budgetSeries->attachAxis(budgetAxisY);
+    
+    QChartView* budgetChartView = new QChartView(budgetChart);
+    budgetChartView->setRenderHint(QPainter::Antialiasing);
+    budgetChartView->setMinimumWidth(400);
+    budgetChartView->setMaximumHeight(350);
+    
+    chartsLayoutRow1->addWidget(pieChartView);
+    chartsLayoutRow1->addWidget(barChartView);
+    
+    chartsLayoutRow2->addWidget(genderChartView);
+    chartsLayoutRow2->addWidget(budgetChartView);
+    
+    chartsMainLayout->addLayout(chartsLayoutRow1);
+    chartsMainLayout->addLayout(chartsLayoutRow2);
+    chartsLayout = chartsMainLayout;
     
     QString statsText = "<b>📈 SALARY STATISTICS</b><br><br>";
     
-    double totalSalary = 0;
     double highestSalary = 0;
     double lowestSalary = std::numeric_limits<double>::max();
     int totalEmployees = table->rowCount();

@@ -30,4 +30,3 @@ bool Connection::createconnect()
     qDebug() << "Database connection successful";
     return true;
 }
-

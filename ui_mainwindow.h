@@ -33,6 +33,7 @@ public:
     QStackedWidget *stackedWidget;
     QWidget *loginPage;
     QVBoxLayout *loginLayout;
+    QLabel *loginAvatar;
     QLabel *loginTitle;
     QLabel *loginSubtitle;
     QSpacerItem *loginSpacerTop;
@@ -93,6 +94,13 @@ public:
         loginLayout = new QVBoxLayout(loginPage);
         loginLayout->setObjectName("loginLayout");
         loginLayout->setContentsMargins(40, 30, 40, 30);
+        loginAvatar = new QLabel(loginPage);
+        loginAvatar->setObjectName("loginAvatar");
+        loginAvatar->setAlignment(Qt::AlignCenter);
+        loginAvatar->setText("⛴");
+        loginAvatar->setStyleSheet("font-size: 80px; color: #01c9ff; margin-bottom: 8px;");
+        loginLayout->addWidget(loginAvatar);
+
         loginTitle = new QLabel(loginPage);
         loginTitle->setObjectName("loginTitle");
         loginTitle->setAlignment(Qt::AlignCenter);
