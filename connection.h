@@ -9,7 +9,7 @@ class Connection
 {
 public:
     static Connection* instance(); // Accès à l'instance unique
-    bool createconnect(); // Méthode pour créer la connexion
+    bool createConnect(); // Méthode pour créer la connexion
     void closeConnection(); // Fermer la connexion
 
     // Constructeur et destructeur publics pour compatibilité

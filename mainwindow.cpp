@@ -5,6 +5,7 @@
 #include "addedit_shipdialog.h"
 #include "forgotpassworddialog.h"
 #include "connection.h"
+#include "fishingzonesdialog.h"
 #include <QTableWidget>
 #include <QTableWidgetItem>
 #include <QHeaderView>
@@ -24,6 +25,7 @@
 #include <QValueAxis>
 #include <QDialog>
 #include <QVBoxLayout>
+#include <QFormLayout>
 #include <QLabel>
 #include <QHBoxLayout>
 #include <QPainter>
@@ -41,6 +43,10 @@
 #include <cmath>
 #include <QClipboard>
 #include <QApplication>
+#include <QPropertyAnimation>
+#include <QGraphicsOpacityEffect>
+#include <QSequentialAnimationGroup>
+#include <QParallelAnimationGroup>
 
 
 MainWindow::MainWindow(QWidget *parent)
@@ -48,7 +54,7 @@ MainWindow::MainWindow(QWidget *parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
-    Connection::instance()->createconnect(); // Ensure DB connection
+    Connection::instance()->createConnect(); // Ensure DB connection
     
     setupTableEmployees();
     setupCapturesUi();
@@ -96,23 +102,9 @@ void MainWindow::setupTableEmployees()
         table->setItem(i, 5, new QTableWidgetItem(salaires[i] + " TND"));
         
         QPushButton* btnEdit = new QPushButton("✏️");
+        btnEdit->setObjectName("btnEdit");
         btnEdit->setToolTip("Edit");
-        btnEdit->setStyleSheet(
-            "QPushButton { "
-            "background-color: #2196F3; "
-            "color: white; "
-            "border: none; "
-            "border-radius: 5px; "
-            "padding: 5px 10px; "
-            "font-weight: bold; "
-            "} "
-            "QPushButton:hover { "
-            "background-color: #1976D2; "
-            "} "
-            "QPushButton:pressed { "
-            "background-color: #1565C0; "
-            "}"
-        );
+        btnEdit->setCursor(Qt::PointingHandCursor);
         btnEdit->setMaximumWidth(40);
         connect(btnEdit, &QPushButton::clicked, this, [this, i]() {
             onEditEmployeeClicked(i);
@@ -120,23 +112,9 @@ void MainWindow::setupTableEmployees()
         table->setCellWidget(i, 6, btnEdit);
         
         QPushButton* btnDelete = new QPushButton("🗑️");
+        btnDelete->setObjectName("btnDelete");
         btnDelete->setToolTip("Delete");
-        btnDelete->setStyleSheet(
-            "QPushButton { "
-            "background-color: #F44336; "
-            "color: white; "
-            "border: none; "
-            "border-radius: 5px; "
-            "padding: 5px 10px; "
-            "font-weight: bold; "
-            "} "
-            "QPushButton:hover { "
-            "background-color: #E53935; "
-            "} "
-            "QPushButton:pressed { "
-            "background-color: #D32F2F; "
-            "}"
-        );
+        btnDelete->setCursor(Qt::PointingHandCursor);
         btnDelete->setMaximumWidth(40);
         connect(btnDelete, &QPushButton::clicked, this, [this, i]() {
             onDeleteEmployeeClicked(i);
@@ -155,9 +133,12 @@ void MainWindow::setupConnections()
     connect(ui->btnLogout, &QPushButton::clicked, this, &MainWindow::onLogoutClicked);
     connect(ui->btnAdd, &QPushButton::clicked, this, &MainWindow::onAddEmployeeClicked);
     connect(ui->lineSearch, &QLineEdit::textChanged, this, &MainWindow::onSearchEmployees);
-    connect(ui->btnSortByPosition, &QPushButton::clicked, this, &MainWindow::onSortByPositionClicked);
-    connect(ui->btnSortBySalary, &QPushButton::clicked, this, &MainWindow::onSortBySalaryClicked);
-    connect(ui->btnAnalytics, &QPushButton::clicked, this, &MainWindow::onShowAnalytics);
+    // Optional navigation/buttons present in the UI
+    connect(ui->btnCaptures, &QPushButton::clicked, this, &MainWindow::showCapturesPage);
+    connect(ui->btnEmployees, &QPushButton::clicked, this, &MainWindow::showEmployeesPage);
+    connect(ui->btnQuais, &QPushButton::clicked, this, &MainWindow::showQuaisPage);
+    connect(ui->btnShips, &QPushButton::clicked, this, &MainWindow::showShipsPage);
+    connect(ui->btnDashboard, &QPushButton::clicked, this, &MainWindow::showEmployeesPage);
     
     // Connect sidebar buttons from Employees Page to switch to Captures
     connect(ui->btnCaptures, &QPushButton::clicked, this, &MainWindow::showCapturesPage);
@@ -174,7 +155,7 @@ void MainWindow::setupConnections()
 void MainWindow::showLoginPage()
 {
     ui->stackedWidget->setCurrentIndex(LoginPage);
-    ui->lineUsername->clear();
+    ui->lineEmail->clear();
     ui->linePassword->clear();
 }
 
@@ -246,7 +227,7 @@ void MainWindow::onDeleteQuaiClicked()
 
 void MainWindow::onLoginClicked()
 {
-    QString username = ui->lineUsername->text();
+    QString username = ui->lineEmail->text();
     QString password = ui->linePassword->text();
     
     if (username.isEmpty() || password.isEmpty()) {
@@ -416,10 +397,9 @@ void MainWindow::updateSalaryStats()
 {
     QTableWidget* table = ui->tableEmployees;
     if (!table || table->rowCount() == 0) {
-        ui->salaryAverage->setText("📊 Salaire Moyen: 0 TND");
-        ui->salaryHighest->setText("📈 Salaire Max: 0 TND");
-        ui->salaryLowest->setText("📉 Salaire Min: 0 TND");
-        ui->salaryTotal->setText("💵 Total Mensuel: 0 TND");
+        ui->salaryAvg->setText("📊 Salaire Moyen: 0 TND");
+        ui->salaryMax->setText("📈 Salaire Max: 0 TND");
+        ui->salaryMin->setText("📉 Salaire Min: 0 TND");
         return;
     }
     
@@ -439,10 +419,9 @@ void MainWindow::updateSalaryStats()
     
     double average = total / table->rowCount();
     
-    ui->salaryAverage->setText(QString("📊 Salaire Moyen: %1 TND").arg(static_cast<int>(average)));
-    ui->salaryHighest->setText(QString("📈 Salaire Max: %1 TND").arg(static_cast<int>(highest)));
-    ui->salaryLowest->setText(QString("📉 Salaire Min: %1 TND").arg(static_cast<int>(lowest)));
-    ui->salaryTotal->setText(QString("💵 Total Mensuel: %1 TND").arg(static_cast<int>(total)));
+    ui->salaryAvg->setText(QString("📊 Salaire Moyen: %1 TND").arg(static_cast<int>(average)));
+    ui->salaryMax->setText(QString("📈 Salaire Max: %1 TND").arg(static_cast<int>(highest)));
+    ui->salaryMin->setText(QString("📉 Salaire Min: %1 TND").arg(static_cast<int>(lowest)));
 }
 
 void MainWindow::onSortByPositionClicked()
@@ -811,15 +790,15 @@ void MainWindow::setupCapturesUi()
     // Header - Same as employee management
     QHBoxLayout *headerLayout = new QHBoxLayout();
     QLabel *title = new QLabel("Gestion des Captures", capturesPage);
-    title->setStyleSheet("font-size: 28px; font-weight: bold; color: #03224c;");
+    title->setObjectName("titleLabel");
     headerLayout->addWidget(title);
     headerLayout->addStretch();
 
     // Search bar with label - Same as employee management
     QLabel *searchLabel = new QLabel("Rechercher:", capturesPage);
-    searchLabel->setStyleSheet("font-weight: bold; color: #03224c;");
+    searchLabel->setObjectName("searchLabel"); // Will use default label or specialized if needed
     headerLayout->addWidget(searchLabel);
-    
+
     QLineEdit *searchLine = new QLineEdit(capturesPage);
     searchLine->setPlaceholderText("Rechercher par navire ou poisson...");
     searchLine->setMinimumWidth(250);
@@ -828,34 +807,79 @@ void MainWindow::setupCapturesUi()
 
     // Sort buttons - Same placement as employee management
     QPushButton *btnSortDate = new QPushButton("Trier Date", capturesPage);
-    btnSortDate->setStyleSheet("QPushButton { background-color: #1409e9; color: white; padding: 8px 12px; border-radius: 5px; font-weight: bold; }");
+    btnSortDate->setObjectName("btnSortDate");
     connect(btnSortDate, &QPushButton::clicked, this, &MainWindow::onSortCapturesByDate);
     headerLayout->addWidget(btnSortDate);
 
     QPushButton *btnSortQty = new QPushButton("Trier Quantité", capturesPage);
-    btnSortQty->setStyleSheet("QPushButton { background-color: #0c10eb; color: white; padding: 8px 12px; border-radius: 5px; font-weight: bold; }");
+    btnSortQty->setObjectName("btnSortQty");
     connect(btnSortQty, &QPushButton::clicked, this, &MainWindow::onSortCapturesByQuantity);
     headerLayout->addWidget(btnSortQty);
 
     // Stats button - Same as employee management (Analytics)
     QPushButton *btnStats = new QPushButton("📊 Statistiques", capturesPage);
-    btnStats->setStyleSheet("QPushButton { background-color: #1b0ce8; color: white; padding: 8px 12px; border-radius: 5px; font-weight: bold; }");
+    btnStats->setObjectName("btnStats");
     connect(btnStats, &QPushButton::clicked, this, &MainWindow::onShowCaptureStats);
     headerLayout->addWidget(btnStats);
 
     // Add button - Same style as employee management
     QPushButton *btnAdd = new QPushButton("+ Ajouter", capturesPage);
-    btnAdd->setStyleSheet("QPushButton { background-color: #4CAF50; color: white; padding: 8px 16px; border-radius: 5px; font-weight: bold; }");
+    btnAdd->setObjectName("btnAdd");
     connect(btnAdd, &QPushButton::clicked, this, &MainWindow::onAddCaptureClicked);
     headerLayout->addWidget(btnAdd);
-    
+
     // PDF button next to Add: opens the Add dialog with an Export PDF option
     QPushButton *btnAddPdf = new QPushButton("📄 PDF", capturesPage);
-    btnAddPdf->setStyleSheet("QPushButton { background-color: #1e40af; color: white; padding: 8px 12px; border-radius: 5px; font-weight: bold; }");
+    btnAddPdf->setObjectName("btnAddPdf");
     connect(btnAddPdf, &QPushButton::clicked, this, &MainWindow::onOpenAddCaptureWithExportClicked);
+
     headerLayout->addWidget(btnAddPdf);
     
     contentLayout->addLayout(headerLayout);
+
+    // Advanced Features Buttons - Bottom Right of Captures Page
+    QHBoxLayout *advancedLayout = new QHBoxLayout();
+    advancedLayout->addStretch();
+    
+    // Button 1: Fraud/Illegal Fishing Detection
+    QPushButton *btnFraudDetection = new QPushButton("🎮 Détection Fraude", capturesPage);
+    btnFraudDetection->setStyleSheet(
+        "QPushButton { "
+        "background-color: #808080; "  // Gray color
+        "color: white; "
+        "padding: 10px 20px; "
+        "border-radius: 8px; "
+        "font-weight: bold; "
+        "font-size: 13px; "
+        "} "
+        "QPushButton:hover { "
+        "background-color: #606060; "
+        "}"
+    );
+    btnFraudDetection->setToolTip("Système intelligent de détection de fraude ou de pêche illégale");
+    connect(btnFraudDetection, &QPushButton::clicked, this, &MainWindow::onDetectFraud);
+    advancedLayout->addWidget(btnFraudDetection);
+    
+    // Button 2: Fishing Zone Recommendation
+    QPushButton *btnZoneRecommendation = new QPushButton("🎮 Zones de Pêche", capturesPage);
+    btnZoneRecommendation->setStyleSheet(
+        "QPushButton { "
+        "background-color: #808080; "  // Gray color
+        "color: white; "
+        "padding: 10px 20px; "
+        "border-radius: 8px; "
+        "font-weight: bold; "
+        "font-size: 13px; "
+        "} "
+        "QPushButton:hover { "
+        "background-color: #606060; "
+        "}"
+    );
+    btnZoneRecommendation->setToolTip("Recommandation intelligente des zones de pêche");
+    connect(btnZoneRecommendation, &QPushButton::clicked, this, &MainWindow::onRecommendFishingZones);
+    advancedLayout->addWidget(btnZoneRecommendation);
+    
+    contentLayout->addLayout(advancedLayout);
 
     // Stats Box - Same as employee management
     QGroupBox *statsBox = new QGroupBox("📊 Statistiques des Captures", capturesPage);
@@ -868,11 +892,17 @@ void MainWindow::setupCapturesUi()
     statCaptureMax = new QLabel("📈 Max: 0 kg", statsBox);
     statCaptureNavires = new QLabel("⚓ Navires: 0", statsBox);
     
-    statDiversity->setStyleSheet("background: #e3f2fd; color: #03224c; font-weight: bold; border-radius: 8px; padding: 10px;");
-    statTotalQuantity->setStyleSheet("background: #e8f5e9; color: #065f46; font-weight: bold; border-radius: 8px; padding: 10px;");
-    statCaptureAverage->setStyleSheet("background: #fff3e0; color: #e65100; font-weight: bold; border-radius: 8px; padding: 10px;");
-    statCaptureMax->setStyleSheet("background: #fce4ec; color: #880e4f; font-weight: bold; border-radius: 8px; padding: 10px;");
-    statCaptureNavires->setStyleSheet("background: #f3e5f5; color: #4a148c; font-weight: bold; border-radius: 8px; padding: 10px;");
+    statDiversity->setProperty("type", "stat-blue");
+    statTotalQuantity->setProperty("type", "stat-green");
+    statCaptureAverage->setProperty("type", "stat-orange");
+    statCaptureMax->setProperty("type", "stat-purple");
+    statCaptureNavires->setProperty("type", "stat-blue");
+    
+    for (auto lbl : {statDiversity, statTotalQuantity, statCaptureAverage, statCaptureMax, statCaptureNavires}) {
+        lbl->setObjectName("statCard");
+        lbl->style()->unpolish(lbl);
+        lbl->style()->polish(lbl);
+    }
     
     statsLayout->addWidget(statDiversity);
     statsLayout->addWidget(statTotalQuantity);
@@ -883,10 +913,10 @@ void MainWindow::setupCapturesUi()
 
     // Table - Same style as employee management
     tableCaptures = new QTableWidget(capturesPage);
+    tableCaptures->setObjectName("tableCaptures");
     tableCaptures->setColumnCount(6);
     tableCaptures->setHorizontalHeaderLabels({"ID", "Navire", "Date", "Type Poisson", "Quantité", "Actions"});
-    // Make ID and Actions columns auto-size to their contents so action buttons remain visible,
-    // while data columns stretch to fill remaining space.
+    // ... rest of table setup ...
     tableCaptures->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
     tableCaptures->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
     tableCaptures->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch);
@@ -895,10 +925,8 @@ void MainWindow::setupCapturesUi()
     tableCaptures->horizontalHeader()->setSectionResizeMode(5, QHeaderView::ResizeToContents);
     tableCaptures->horizontalHeader()->setStretchLastSection(false);
     tableCaptures->verticalHeader()->setVisible(false);
-    // Reduce excessive stretching: use a moderate default row height and
-    // let the table become scrollable when there are more rows than fit.
-    tableCaptures->verticalHeader()->setDefaultSectionSize(48); // moderate row height
-    tableCaptures->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    tableCaptures->verticalHeader()->setDefaultSectionSize(60); 
+    tableCaptures->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
     tableCaptures->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
     tableCaptures->setSelectionBehavior(QAbstractItemView::SelectRows);
     tableCaptures->setSelectionMode(QAbstractItemView::SingleSelection);
@@ -917,44 +945,46 @@ void MainWindow::setupCapturesUi()
 QWidget* MainWindow::createSidebar(QWidget* parent)
 {
     QWidget *sidebar = new QWidget(parent);
-    sidebar->setMinimumWidth(220);
-    sidebar->setStyleSheet("background-color: #03224c; color: white;");
+    sidebar->setObjectName("sidebar");
+    sidebar->setMinimumWidth(260);
     
     QVBoxLayout *layout = new QVBoxLayout(sidebar);
-    layout->setSpacing(0);
+    layout->setSpacing(5);
     layout->setContentsMargins(0, 0, 0, 0);
 
-    QLabel *logo = new QLabel("⚓Fishtech", sidebar);
+    QLabel *logo = new QLabel("⚓ FISHTECH", sidebar);
+    logo->setObjectName("logo");
     logo->setAlignment(Qt::AlignCenter);
-    logo->setStyleSheet("font-size: 24px; font-weight: bold; padding: 20px; border-bottom: 3px solid #2196F3;");
     layout->addWidget(logo);
 
-    QString btnStyle = "QPushButton { text-align: left; padding: 14px 16px; background-color: #03224c; border: none; color: white; font-weight: 500; }"
-                       "QPushButton:hover { background-color: #1565c0; border-left: 4px solid #64b5f6; }";
+    auto addSidebarBtn = [&](const QString &text, const QString &objName = "") {
+        QPushButton *btn = new QPushButton(text, sidebar);
+        btn->setCheckable(true);
+        btn->setCursor(Qt::PointingHandCursor);
+        if (!objName.isEmpty()) btn->setObjectName(objName);
+        layout->addWidget(btn);
+        return btn;
+    };
 
-    QPushButton *btnEmp = new QPushButton("👤 Employés", sidebar);
-    btnEmp->setStyleSheet(btnStyle);
-    connect(btnEmp, &QPushButton::clicked, this, &MainWindow::showEmployeesPage);
+    QPushButton *btnDash = addSidebarBtn("📊 Tableau de bord");
+    QPushButton *btnQuais = addSidebarBtn("⚓ Quais");
+    QPushButton *btnNavires = addSidebarBtn("🚢 Navires");
+    QPushButton *btnCap = addSidebarBtn("🐟 Captures");
+    QPushButton *btnEmp = addSidebarBtn("👥 Employés");
     
-    QPushButton *btnCap = new QPushButton("🐟 Captures", sidebar);
-    btnCap->setStyleSheet(btnStyle);
+    connect(btnEmp, &QPushButton::clicked, this, &MainWindow::showEmployeesPage);
     connect(btnCap, &QPushButton::clicked, this, &MainWindow::showCapturesPage);
+    connect(btnNavires, &QPushButton::clicked, this, &MainWindow::showShipsPage);
+    connect(btnQuais, &QPushButton::clicked, this, &MainWindow::showQuaisPage);
 
-    QPushButton *btnLogout = new QPushButton("⏻ Déconnexion", sidebar);
-    btnLogout->setStyleSheet(btnStyle);
-    connect(btnLogout, &QPushButton::clicked, this, &MainWindow::onLogoutClicked);
-
-    layout->addWidget(new QPushButton("🏠 Tableau de bord", sidebar));
-    layout->addWidget(new QPushButton("⚓ Quais", sidebar));
-    layout->addWidget(new QPushButton("🚢 Navires", sidebar));
-    layout->addWidget(btnCap);
-    layout->addWidget(btnEmp);
     layout->addStretch();
-    layout->addWidget(btnLogout);
 
-    // Apply style to all buttons
-    QList<QPushButton*> buttons = sidebar->findChildren<QPushButton*>();
-    for(auto btn : buttons) btn->setStyleSheet(btnStyle);
+    QPushButton *btnLogout = new QPushButton("🚪 Déconnexion", sidebar);
+    btnLogout->setObjectName("btnLogout");
+    btnLogout->setCursor(Qt::PointingHandCursor);
+    connect(btnLogout, &QPushButton::clicked, this, &MainWindow::onLogoutClicked);
+    layout->addWidget(btnLogout);
+    layout->addSpacing(20);
 
     return sidebar;
 }
@@ -964,7 +994,7 @@ void MainWindow::setupTableCaptures()
     if (!tableCaptures) return;
     
     // Ensure database connection
-    Connection::instance()->createconnect();
+    Connection::instance()->createConnect();
     QSqlDatabase db = QSqlDatabase::database();
 
     QSqlQuery q(db);
@@ -997,46 +1027,26 @@ void MainWindow::setupTableCaptures()
         
         // Delete button
         QPushButton *btnDelete = new QPushButton("🗑️");
+        btnDelete->setObjectName("btnDelete");
         btnDelete->setToolTip("Supprimer");
-        btnDelete->setStyleSheet(
-            "QPushButton { "
-            "background-color: #F44336; "
-            "color: white; "
-            "border: none; "
-            "border-radius: 5px; "
-            "padding: 5px 10px; "
-            "font-weight: bold; "
-            "} "
-            "QPushButton:hover { "
-            "background-color: #E53935; "
-            "} "
-            "QPushButton:pressed { "
-            "background-color: #D32F2F; "
-            "}"
-        );
+        btnDelete->setCursor(Qt::PointingHandCursor);
         btnDelete->setMaximumWidth(40);
         connect(btnDelete, &QPushButton::clicked, this, [this, row]() { onDeleteCaptureClicked(row); });
 
-        // PDF button
+        // Edit button
+        QPushButton *btnEdit = new QPushButton("✏️");
+        btnEdit->setObjectName("btnEdit");
+        btnEdit->setToolTip("Modifier");
+        btnEdit->setCursor(Qt::PointingHandCursor);
+        btnEdit->setMaximumWidth(40);
+        connect(btnEdit, &QPushButton::clicked, this, [this, row]() { onEditCaptureClicked(row); });
+        actionLayout->addWidget(btnEdit);
+
+        // View button
         QPushButton *btnView = new QPushButton("👀");
+        btnView->setObjectName("btnSecondary");
         btnView->setToolTip("Voir les détails");
-        btnView->setStyleSheet(
-            "QPushButton { "
-            "background-color: #1e40af; "
-            "color: white; "
-            "border: none; "
-            "border-radius: 5px; "
-            "padding: 6px; "
-            "font-weight: bold; "
-            "font-size: 14px; "
-            "} "
-            "QPushButton:hover { "
-            "background-color: #1e3a8a; "
-            "} "
-            "QPushButton:pressed { "
-            "background-color: #172554; "
-            "}"
-        );
+        btnView->setCursor(Qt::PointingHandCursor);
         btnView->setMaximumWidth(40);
         connect(btnView, &QPushButton::clicked, this, [this, row]() {
             onViewCaptureClicked(row);
@@ -1063,7 +1073,7 @@ void MainWindow::setupTableCaptures()
 void MainWindow::generateRandomCaptures()
 {
     // Ensure database connection
-    Connection::instance()->createconnect();
+    Connection::instance()->createConnect();
     QSqlDatabase db = QSqlDatabase::database();
 
     // Check if table is empty
@@ -1104,7 +1114,7 @@ void MainWindow::generateRandomCaptures()
 void MainWindow::onAddCaptureClicked()
 {
     // Ensure database connection is established using Singleton pattern
-    Connection::instance()->createconnect();
+    Connection::instance()->createConnect();
     
     // Get the database connection
     QSqlDatabase db = QSqlDatabase::database();
@@ -1130,7 +1140,7 @@ void MainWindow::onAddCaptureClicked()
 void MainWindow::onOpenAddCaptureWithExportClicked()
 {
     // Open the Add dialog with Export PDF enabled
-    Connection::instance()->createconnect();
+    Connection::instance()->createConnect();
     QSqlDatabase db = QSqlDatabase::database();
 
     AddEditCaptureDialog dlg(this, false, true);
@@ -1163,7 +1173,7 @@ void MainWindow::onEditCaptureClicked(int row)
     dlg.setCaptureData(navire, date, type, quantite);
 
     if (dlg.exec() == QDialog::Accepted) {
-        Connection::instance()->createconnect();
+        Connection::instance()->createConnect();
         QSqlDatabase db = QSqlDatabase::database();
         QSqlQuery q(db);
         q.prepare("UPDATE captures SET Navire=?, Date_Capture=?, Type_Poisson=?, Quantite=? WHERE ID_Capture=?");
@@ -1186,7 +1196,7 @@ void MainWindow::onDeleteCaptureClicked(int row)
 {
     int id = tableCaptures->item(row, 0)->data(Qt::UserRole).toInt();
     if (QMessageBox::question(this, "Confirmation", "Voulez-vous vraiment supprimer cette capture ?", QMessageBox::Yes | QMessageBox::No) == QMessageBox::Yes) {
-        Connection::instance()->createconnect();
+        Connection::instance()->createConnect();
         QSqlDatabase db = QSqlDatabase::database();
         QSqlQuery q(db);
         q.prepare("DELETE FROM captures WHERE ID_Capture = ?");
@@ -1528,6 +1538,336 @@ void MainWindow::onComparePeriods()
     }
 }
 
+// ==========================================================================================
+// ADVANCED FEATURES: FRAUD DETECTION & FISHING ZONE RECOMMENDATION
+// ==========================================================================================
+
+// Advanced Feature 1: Intelligent Fraud Detection / Illegal Fishing Detection
+void MainWindow::onDetectFraud()
+{
+    if (!tableCaptures || tableCaptures->rowCount() == 0) {
+        QMessageBox::warning(this, "Attention", "Aucune donnee de capture disponible pour l'analyse");
+        return;
+    }
+
+    QDialog* fraudDialog = new QDialog(this);
+    fraudDialog->setWindowTitle(" detection de Fraude / Peche Illegale");
+    fraudDialog->setGeometry(100, 100, 900, 600);
+    fraudDialog->setStyleSheet("background-color: white;");
+
+    QVBoxLayout* layout = new QVBoxLayout(fraudDialog);
+
+    // Title
+    QLabel* title = new QLabel("<h2> Systeme Intelligent de Detection de Fraude</h2>", fraudDialog);
+    title->setAlignment(Qt::AlignCenter);
+    title->setStyleSheet("color: #03224c; padding: 10px;");
+    layout->addWidget(title);
+
+    // Analysis results
+    QString report = "<b> RAPPORT D'ANALYSE DE FRAUDE</b><br><br>";
+    
+    // Collect data
+    QList<double> quantities;
+    QMap<QString, QList<double>> shipQuantities;
+    
+    for (int i = 0; i < tableCaptures->rowCount(); ++i) {
+        QString qtyText = tableCaptures->item(i, 4)->text().replace(" kg", "");
+        double q = qtyText.toDouble();
+        quantities.append(q);
+        QString navire = tableCaptures->item(i, 1)->text();
+        shipQuantities[navire].append(q);
+    }
+
+    // Calculate statistics
+    double totalQty = 0;
+    double maxQty = 0;
+    double minQty = std::numeric_limits<double>::max();
+    for (double q : quantities) {
+        totalQty += q;
+        if (q > maxQty) maxQty = q;
+        if (q < minQty) minQty = q;
+    }
+    double avgQty = quantities.size() > 0 ? totalQty / quantities.size() : 0;
+
+    // Calculate standard deviation
+    double sqSum = 0;
+    for (double q : quantities) {
+        sqSum += (q - avgQty) * (q - avgQty);
+    }
+    double stdDev = quantities.size() > 1 ? std::sqrt(sqSum / quantities.size()) : 0;
+
+    // Check for anomalies
+    int suspiciousCount = 0;
+
+    report += "<b> ANOMALIES DETECTEES:</b><br><br>";
+    
+    // Check 1: Unusually high quantities
+    for (int i = 0; i < tableCaptures->rowCount(); ++i) {
+        QString qtyText = tableCaptures->item(i, 4)->text().replace(" kg", "");
+        double q = qtyText.toDouble();
+        
+        if (q > avgQty + 2 * stdDev) {
+            QString navire = tableCaptures->item(i, 1)->text();
+            QString type = tableCaptures->item(i, 3)->text();
+            QString date = tableCaptures->item(i, 2)->text();
+            report += QString(" Quantite suspecte: %1 kg (Navire: %2, Type: %3, Date: %4)")
+                     .arg(q).arg(navire).arg(type).arg(date);
+            report += "<br>--> La quantite depasse la moyenne de " + QString::number(static_cast<int>(q - avgQty)) + " kg de plus de 2 ecarts-types<br><br";
+            suspiciousCount++;
+        }
+    }
+
+    // Check 2: Ships with consistently high quantities
+    for (auto it = shipQuantities.begin(); it != shipQuantities.end(); ++it) {
+        double shipTotal = 0;
+        double shipCount = it.value().size();
+        for (double q : it.value()) {
+            shipTotal += q;
+        }
+        double shipAvg = shipCount > 0 ? shipTotal / shipCount : 0;
+        
+        if (shipAvg > avgQty * 1.5) {
+            report += QString(" Navire suspect: %1").arg(it.key());
+            report += "<br>--> Moyenne des captures: " + QString::number(static_cast<int>(shipAvg)) + " kg (Moyenne globale: " + QString::number(static_cast<int>(avgQty)) + " kg)<br><br";
+            suspiciousCount++;
+        }
+    }
+
+    if (suspiciousCount == 0) {
+        report += " Aucune anomalie majeure detectee<br>";
+        report += "<br><i>Le systeme n'a trouve aucune indication de fraude ou de peche illegale.</i><br>";
+    } else {
+        report += "<br><b> RESUME:</b><br>";
+        report += QString("--> <b>%1</b> anomalies potentielles detectees<br>").arg(suspiciousCount);
+        report += "--> Une enquete plus approfondie est recommandee<br";
+    }
+
+    // Statistics section
+    report += "<br><br><b> STATISTIQUES DE REFERENCE:</b><br>";
+    report += QString("Moyenne des captures: <b>%1 kg</b><br>").arg(static_cast<int>(avgQty));
+    report += QString("Ecart-type: <b>%1 kg</b><br>").arg(static_cast<int>(stdDev));
+    report += QString("Seuil d'alerte: <b>%1 kg</b> (moyenne + 2xecart-type)<br>").arg(static_cast<int>(avgQty + 2*stdDev));
+
+    QScrollArea* scrollArea = new QScrollArea();
+    scrollArea->setWidgetResizable(true);
+    
+    QLabel* reportLabel = new QLabel(report);
+    reportLabel->setStyleSheet("background-color: #f5f5f5; padding: 15px; border-radius: 8px; color: #03224c; font-size: 13px;");
+    reportLabel->setWordWrap(true);
+    reportLabel->setMinimumHeight(300);
+    
+    scrollArea->setWidget(reportLabel);
+    layout->addWidget(scrollArea);
+
+    // Buttons
+    QHBoxLayout* buttonLayout = new QHBoxLayout();
+    
+    QPushButton* closeBtn = new QPushButton("Fermer");
+    closeBtn->setStyleSheet("QPushButton { background-color: #03224c; color: white; padding: 10px 20px; border-radius: 5px; font-weight: bold; }");
+    connect(closeBtn, &QPushButton::clicked, fraudDialog, &QDialog::accept);
+    buttonLayout->addWidget(closeBtn);
+    
+    layout->addLayout(buttonLayout);
+    
+    fraudDialog->exec();
+}
+
+// Advanced Feature 2: Intelligent Fishing Zone Recommendation
+void MainWindow::onRecommendFishingZones()
+{
+    if (!tableCaptures || tableCaptures->rowCount() == 0) {
+        QMessageBox::warning(this, "Attention", "Aucune donnee de capture disponible pour les recommandations");
+        return;
+    }
+
+    QDialog* zoneDialog = new QDialog(this);
+    zoneDialog->setWindowTitle(" Recommendation de Zones de Peche");
+    zoneDialog->setGeometry(100, 100, 900, 650);
+    zoneDialog->setStyleSheet("background-color: white;");
+
+    QVBoxLayout* layout = new QVBoxLayout(zoneDialog);
+
+    // Title
+    QLabel* title = new QLabel("<h2> Systeme Intelligent de Recommendation de Zones de Peche</h2>", zoneDialog);
+    title->setAlignment(Qt::AlignCenter);
+    title->setStyleSheet("color: #03224c; padding: 10px;");
+    layout->addWidget(title);
+
+    // Analyze historical data
+    QMap<QString, double> fishByType;
+    QMap<QString, int> catchCountByType;
+    
+    for (int i = 0; i < tableCaptures->rowCount(); ++i) {
+        QString type = tableCaptures->item(i, 3)->text();
+        QString qtyText = tableCaptures->item(i, 4)->text().replace(" kg", "");
+        double q = qtyText.toDouble();
+        
+        fishByType[type] += q;
+        catchCountByType[type]++;
+    }
+
+    // Calculate best zones based on fish types
+    QString recommendation = "<b> ZONES DE PECHE RECOMMANDEES</b><br><br>";
+    
+    // Sort fish types by total quantity
+    QList<QPair<QString, double>> sortedFish;
+    for (auto it = fishByType.begin(); it != fishByType.end(); ++it) {
+        sortedFish.append(qMakePair(it.key(), it.value()));
+    }
+    std::sort(sortedFish.begin(), sortedFish.end(), [](const QPair<QString, double>& a, const QPair<QString, double>& b) {
+        return a.second > b.second;
+    });
+
+    recommendation += "<b> TOP 3 DES ZONES (par quantite totale):</b><br><br>";
+    
+    int rank = 1;
+    for (auto it = sortedFish.begin(); it != sortedFish.end() && rank <= 3; ++it) {
+        QString fishType = it->first;
+        double totalQty = it->second;
+        int catches = catchCountByType[fishType];
+        
+        double avgQty = catches > 0 ? totalQty / catches : 0;
+        
+        QString zoneName;
+        if (fishType == "Thon") zoneName = "Zone Nord (Eau profonde)";
+        else if (fishType == "Sardine") zoneName = "Zone Cotiere Est";
+        else if (fishType == "Maquereau") zoneName = "Zone Centrale";
+        else if (fishType == "Espadon") zoneName = "Zone Sud-Ouest";
+        else if (fishType == "Crevette") zoneName = "Zone des Bancs";
+        else if (fishType == "Dorade") zoneName = "Zone Cotiere";
+        else if (fishType == "Saumon") zoneName = "Zone de Migration";
+        else zoneName = "Zone de Peche Mixte " + QString::number(rank);
+        
+        recommendation += QString("<b>%1. %2</b><br>").arg(rank).arg(fishType);
+        recommendation += QString("   Zone recommande: <b>%1</b><br>").arg(zoneName);
+        recommendation += QString("   Quantite totale: <b>%1 kg</b><br>").arg(static_cast<int>(totalQty));
+        recommendation += QString("   Nombre de captures: <b>%1</b><br>").arg(catches);
+        recommendation += QString("   Moyenne par capture: <b>%1 kg</b><br><br>").arg(static_cast<int>(avgQty));
+        
+        rank++;
+    }
+
+    recommendation += "<b> RECOMMANDATIONS SAISONNIERES:</b><br><br>";
+    
+    // Check current season and recommend
+    QDate currentDate = QDate::currentDate();
+    QString season;
+    int month = currentDate.month();
+    
+    if (month >= 3 && month <= 5) {
+        season = "Printemps";
+        recommendation += " <b>Saison: Printemps</b><br";
+        recommendation += "--> Recommendation: Peche au maquereau et sardine pres des zones cotieres<br<br>";
+    } else if (month >= 6 && month <= 8) {
+        season = "Ete";
+        recommendation += " <b>Saison: Ete</b><br";
+        recommendation += "--> Recommendation: Peche au thon en eau profonde<br<br>";
+    } else if (month >= 9 && month <= 11) {
+        season = "Automne";
+        recommendation += " <b>Saison: Automne</b><br";
+        recommendation += "--> Recommendation: Peche a la dorade et au bar<br<br>";
+    } else {
+        season = "Hiver";
+        recommendation += " <b>Saison: Hiver</b><br";
+        recommendation += "--> Recommendation: Peche a la crevette dans les zones abritees<br<br>";
+    }
+
+    recommendation += "<b> ZONES A EVITER:</b><br><br>";
+    
+    // Find least productive zones
+    QList<QPair<QString, double>> reverseSorted = sortedFish;
+    std::sort(reverseSorted.begin(), reverseSorted.end(), [](const QPair<QString, double>& a, const QPair<QString, double>& b) {
+        return a.second < b.second;
+    });
+    
+    for (int i = 0; i < qMin(2, reverseSorted.size()); ++i) {
+        recommendation += QString(" %1: Quantite faible (%2 kg) - Consider other zones<br>")
+                         .arg(reverseSorted[i].first)
+                         .arg(static_cast<int>(reverseSorted[i].second));
+    }
+
+    recommendation += "<br><b> RESUME:</b><br>";
+    recommendation += QString("--> Total fish types analyzed: <b>%1</b><br>").arg(fishByType.size());
+    recommendation += QString("--> Total captures in database: <b>%1</b><br>").arg(tableCaptures->rowCount());
+    recommendation += "--> Based on historical performance data<br";
+
+    QScrollArea* scrollArea = new QScrollArea();
+    scrollArea->setWidgetResizable(true);
+    
+    QLabel* recLabel = new QLabel(recommendation);
+    recLabel->setStyleSheet("background-color: #e8f5e9; padding: 15px; border-radius: 8px; color: #065f46; font-size: 13px;");
+    recLabel->setWordWrap(true);
+    recLabel->setMinimumHeight(350);
+    
+    scrollArea->setWidget(recLabel);
+    layout->addWidget(scrollArea);
+
+    // Buttons
+    QHBoxLayout* buttonLayout = new QHBoxLayout();
+    
+    QPushButton* applyBtn = new QPushButton(" Appliquer Recommandations");
+    applyBtn->setStyleSheet("QPushButton { background-color: #4CAF50; color: white; padding: 10px 20px; border-radius: 5px; font-weight: bold; }");
+    connect(applyBtn, &QPushButton::clicked, [this, sortedFish]() {
+        QStringList topFish;
+        for (int i = 0; i < qMin(3, sortedFish.size()); ++i) {
+            topFish.append(sortedFish[i].first);
+        }
+        QMessageBox::information(this, "Recommandations Appliquees", 
+            "Les recommandations ont ete appliquees!\n\n"
+            "Types de poissons prioritaires:\n" + topFish.join("\n") + 
+            "\n\nLes navires seront informes des zones recommandees.");
+    });
+    buttonLayout->addWidget(applyBtn);
+    
+    QPushButton* closeBtn = new QPushButton("Fermer");
+    closeBtn->setStyleSheet("QPushButton { background-color: #03224c; color: white; padding: 10px 20px; border-radius: 5px; font-weight: bold; }");
+    connect(closeBtn, &QPushButton::clicked, zoneDialog, &QDialog::accept);
+    buttonLayout->addWidget(closeBtn);
+    
+    layout->addLayout(buttonLayout);
+    
+    // Add a button to show recommended zones on the local 2D map dialog
+    QPushButton* mapBtn = new QPushButton("Voir sur carte");
+    mapBtn->setStyleSheet("QPushButton { background-color: #1976D2; color: white; padding: 10px 20px; border-radius: 5px; font-weight: bold; }");
+    layout->addWidget(mapBtn);
+
+    connect(mapBtn, &QPushButton::clicked, this, [this, sortedFish]() {
+        // Build demo ZoneEntry list from top fish types
+        QList<ZoneEntry> entries;
+        QMap<QString, QPointF> coords;
+        coords["Zone Nord (Eau profonde)"] = QPointF(80, 40);
+        coords["Zone Cotiere Est"] = QPointF(220, 60);
+        coords["Zone Centrale"] = QPointF(160, 140);
+        coords["Zone Sud-Ouest"] = QPointF(300, 180);
+        coords["Zone des Bancs"] = QPointF(60, 200);
+        coords["Zone Cotiere"] = QPointF(260, 100);
+        coords["Zone de Migration"] = QPointF(120, 30);
+
+        int limitMap = qMin(3, sortedFish.size());
+        for (int i = 0; i < limitMap; ++i) {
+            QString fishType = sortedFish[i].first;
+            QString zoneName;
+            if (fishType == "Thon") zoneName = "Zone Nord (Eau profonde)";
+            else if (fishType == "Sardine") zoneName = "Zone Cotiere Est";
+            else if (fishType == "Maquereau") zoneName = "Zone Centrale";
+            else if (fishType == "Espadon") zoneName = "Zone Sud-Ouest";
+            else if (fishType == "Crevette") zoneName = "Zone des Bancs";
+            else if (fishType == "Dorade") zoneName = "Zone Cotiere";
+            else if (fishType == "Saumon") zoneName = "Zone de Migration";
+            else zoneName = "Zone Mixte " + QString::number(i+1);
+
+            QPointF pos = coords.contains(zoneName) ? coords[zoneName] : QPointF(100 + i*60, 80 + i*40);
+            QString reason = QString("Type: %1, Quantite totale: %2 kg").arg(fishType).arg(static_cast<int>(sortedFish[i].second));
+            entries.append({ zoneName, pos, reason });
+        }
+
+        FishingZonesDialog dlg(entries, this);
+        dlg.exec();
+    });
+    
+    zoneDialog->exec();
+}
+
 void MainWindow::generateCaptureAnalyticsPDF()
 {
     QString fileName = QFileDialog::getSaveFileName(this, "Enregistrer Rapport Captures (PDF)", "", "Fichiers PDF (*.pdf)");
@@ -1694,7 +2034,7 @@ void MainWindow::setupShipsUi()
     // Header
     QHBoxLayout *headerLayout = new QHBoxLayout();
     QLabel *title = new QLabel("Gestion des Navires", shipsPage);
-    title->setStyleSheet("font-size: 28px; font-weight: bold; color: #03224c;");
+    title->setObjectName("titleLabel");
     headerLayout->addWidget(title);
     headerLayout->addStretch();
 
@@ -1704,8 +2044,10 @@ void MainWindow::setupShipsUi()
     headerLayout->addWidget(searchLine);
 
     QPushButton *btnAdd = new QPushButton("+ Ajouter", shipsPage);
+    btnAdd->setObjectName("btnAdd");
     connect(btnAdd, &QPushButton::clicked, this, &MainWindow::onAddShipClicked);
     headerLayout->addWidget(btnAdd);
+
     contentLayout->addLayout(headerLayout);
 
     // Toolbar
@@ -1739,6 +2081,9 @@ void MainWindow::setupShipsUi()
     tableShips->setHorizontalHeaderLabels({"ID", "Nom", "Immatriculation", "Type", "Capacité", "Statut", "Actions"});
     tableShips->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
     tableShips->verticalHeader()->setVisible(false);
+    tableShips->verticalHeader()->setDefaultSectionSize(48);
+    tableShips->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    tableShips->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
     tableShips->setSelectionBehavior(QAbstractItemView::SelectRows);
     tableShips->setSelectionMode(QAbstractItemView::SingleSelection);
     contentLayout->addWidget(tableShips);
@@ -1752,7 +2097,7 @@ void MainWindow::setupTableShips()
     if (!tableShips) return;
 
     // Ensure database connection
-    Connection::instance()->createconnect();
+    Connection::instance()->createConnect();
     QSqlDatabase db = QSqlDatabase::database();
 
     QSqlQuery q(db);
@@ -1785,26 +2130,27 @@ void MainWindow::setupTableShips()
         actionLayout->setContentsMargins(0, 0, 0, 0);
         
         QPushButton *btnEdit = new QPushButton("✏️");
-        btnEdit->setMaximumWidth(30);
-        btnEdit->setStyleSheet("background-color: #2196F3; color: white; border-radius: 3px;");
+        btnEdit->setObjectName("btnEdit");
+        btnEdit->setCursor(Qt::PointingHandCursor);
+        btnEdit->setMaximumWidth(40);
         connect(btnEdit, &QPushButton::clicked, this, [this, row]() { onEditShipClicked(row); });
-        
+
         QPushButton *btnDelete = new QPushButton("🗑️");
-        btnDelete->setMaximumWidth(30);
-        btnDelete->setStyleSheet("background-color: #F44336; color: white; border-radius: 3px;");
+        btnDelete->setObjectName("btnDelete");
+        btnDelete->setCursor(Qt::PointingHandCursor);
+        btnDelete->setMaximumWidth(40);
         connect(btnDelete, &QPushButton::clicked, this, [this, row]() { onDeleteShipClicked(row); });
 
         actionLayout->addWidget(btnEdit);
         actionLayout->addWidget(btnDelete);
-        tableShips->setCellWidget(row, 6, actionWidget);
-    }
+        tableShips->setCellWidget(row, 6, actionWidget);    }
     tableShips->setColumnHidden(0, true);
 }
 
 void MainWindow::onAddShipClicked()
 {
     // Ensure database connection is established using Singleton pattern
-    Connection::instance()->createconnect();
+    Connection::instance()->createConnect();
     
     // Get the database connection
     QSqlDatabase db = QSqlDatabase::database();
@@ -1842,7 +2188,7 @@ void MainWindow::onEditShipClicked(int row)
     if (dlg.exec() == QDialog::Accepted) {
         QString newStatut = dlg.getStatut();
         
-        Connection::instance()->createconnect();
+        Connection::instance()->createConnect();
         QSqlDatabase db = QSqlDatabase::database();
         QSqlQuery q(db);
         q.prepare("UPDATE navires SET Nom=?, Immatriculation=?, Type=?, Capacite=?, Statut=? WHERE ID_Navire=?");
@@ -1876,7 +2222,7 @@ void MainWindow::onDeleteShipClicked(int row)
 {
     QString id = tableShips->item(row, 0)->text();
     if (QMessageBox::question(this, "Confirmation", "Supprimer ce navire ?") == QMessageBox::Yes) {
-        Connection::instance()->createconnect();
+        Connection::instance()->createConnect();
         QSqlDatabase db = QSqlDatabase::database();
         QSqlQuery q(db);
         q.prepare("DELETE FROM navires WHERE ID_Navire = ?");
@@ -1909,24 +2255,261 @@ void MainWindow::onSortShipsByStatus()
 
 void MainWindow::onShowShipStats()
 {
-    QDialog dlg(this);
-    dlg.setWindowTitle("Statistiques Navires");
-    dlg.resize(600, 400);
-    QVBoxLayout *layout = new QVBoxLayout(&dlg);
-
-    QPieSeries *series = new QPieSeries();
-    QSqlQuery q("SELECT Type, COUNT(*) FROM navires GROUP BY Type");
-    while (q.next()) {
-        series->append(q.value(0).toString(), q.value(1).toInt());
+    // Show a richer analytics dialog similar to employee analytics
+    if (!tableShips || tableShips->rowCount() == 0) {
+        QMessageBox::warning(this, "Attention", "Aucune donnée de navire disponible");
+        return;
     }
 
-    QChart *chart = new QChart();
-    chart->addSeries(series);
-    chart->setTitle("Répartition des navires par Type");
+    QDialog* analyticsDialog = new QDialog(this);
+    analyticsDialog->setWindowTitle("📊 Statistiques des Navires");
+    analyticsDialog->setGeometry(100, 100, 1000, 700);
+
+    QVBoxLayout* layout = new QVBoxLayout(analyticsDialog);
+    QHBoxLayout* chartsLayout = new QHBoxLayout();
+
+    // Pie: Ships by Type
+    QMap<QString, int> shipsByType;
+    for (int i = 0; i < tableShips->rowCount(); ++i) {
+        QString type = tableShips->item(i, 3)->text();
+        shipsByType[type]++;
+    }
+
+    QPieSeries* pieSeries = new QPieSeries();
+    int colIdx = 0;
+    QColor colors[] = {QColor(33,150,243), QColor(244,67,54), QColor(76,175,80), QColor(255,152,0), QColor(156,39,176)};
+    for (auto it = shipsByType.begin(); it != shipsByType.end(); ++it) {
+        QPieSlice* slice = pieSeries->append(it.key() + ": " + QString::number(it.value()), it.value());
+        slice->setColor(colors[colIdx % 5]);
+        colIdx++;
+    }
+
+    QChart* pieChart = new QChart();
+    pieChart->addSeries(pieSeries);
+    pieChart->setTitle("Navires par Type");
+    pieChart->setAnimationOptions(QChart::SeriesAnimations);
+
+    QChartView* pieChartView = new QChartView(pieChart);
+    pieChartView->setRenderHint(QPainter::Antialiasing);
+    pieChartView->setMinimumWidth(450);
+
+    // Bar: Ships by Status
+    QMap<QString, int> shipsByStatus;
+    for (int i = 0; i < tableShips->rowCount(); ++i) {
+        QString status = tableShips->item(i, 5)->text();
+        shipsByStatus[status]++;
+    }
+
+    QBarSet* barSet = new QBarSet("Count");
+    QStringList categories;
+    for (auto it = shipsByStatus.begin(); it != shipsByStatus.end(); ++it) {
+        categories << it.key();
+        *barSet << it.value();
+        barSet->setColor(QColor(33,150,243));
+    }
+
+    QBarSeries* barSeries = new QBarSeries();
+    barSeries->append(barSet);
+
+    QChart* barChart = new QChart();
+    barChart->addSeries(barSeries);
+    barChart->setTitle("Navires par Statut");
+    barChart->setAnimationOptions(QChart::SeriesAnimations);
+
+    QBarCategoryAxis* axisX = new QBarCategoryAxis();
+    axisX->append(categories);
+    barChart->addAxis(axisX, Qt::AlignBottom);
+    barSeries->attachAxis(axisX);
+
+    QValueAxis* axisY = new QValueAxis();
+    barChart->addAxis(axisY, Qt::AlignLeft);
+    barSeries->attachAxis(axisY);
+
+    QChartView* barChartView = new QChartView(barChart);
+    barChartView->setRenderHint(QPainter::Antialiasing);
+    barChartView->setMinimumWidth(450);
+
+    chartsLayout->addWidget(pieChartView);
+    chartsLayout->addWidget(barChartView);
+
+    // Statistics Summary
+    QString statsText = "<b>📈 STATISTIQUES DES NAVIRES</b><br><br>";
+    int totalShips = tableShips->rowCount();
+    int totalCapacity = 0;
+    int maxCapacity = 0;
+    int minCapacity = std::numeric_limits<int>::max();
+
+    for (int i = 0; i < tableShips->rowCount(); ++i) {
+        QString capText = tableShips->item(i, 4)->text().replace(" T", "");
+        int cap = capText.toInt();
+        totalCapacity += cap;
+        if (cap > maxCapacity) maxCapacity = cap;
+        if (cap < minCapacity) minCapacity = cap;
+    }
+
+    double avgCapacity = totalShips > 0 ? static_cast<double>(totalCapacity) / totalShips : 0;
+
+    statsText += QString("Total Navires: <b>%1</b><br>").arg(totalShips);
+    statsText += QString("Capacité Totale: <b>%1 T</b><br>").arg(totalCapacity);
+    statsText += QString("Capacité Moyenne: <b>%1 T</b><br>").arg(static_cast<int>(avgCapacity));
+    statsText += QString("Capacité Max: <b>%1 T</b><br>").arg(maxCapacity);
+    statsText += QString("Capacité Min: <b>%1 T</b><br><br>").arg(minCapacity == std::numeric_limits<int>::max() ? 0 : minCapacity);
+
+    statsText += "<b>📊 Répartition par Type</b><br>";
+    for (auto it = shipsByType.begin(); it != shipsByType.end(); ++it) {
+        statsText += QString("%1: <b>%2</b> navires<br>").arg(it.key()).arg(it.value());
+    }
     
-    QChartView *chartView = new QChartView(chart);
-    layout->addWidget(chartView);
-    dlg.exec();
+    statsText += "<br><b>⚓ Répartition par Statut</b><br>";
+    for (auto it = shipsByStatus.begin(); it != shipsByStatus.end(); ++it) {
+        QString statusIcon = "";
+        if (it.key() == "Disponible") statusIcon = "✅ ";
+        else if (it.key() == "En mer") statusIcon = "🌊 ";
+        else if (it.key() == "Maintenance") statusIcon = "🔧 ";
+        else if (it.key() == "Interdit") statusIcon = "🚫 ";
+        statsText += QString("%1%2: <b>%3</b> navires<br>").arg(statusIcon).arg(it.key()).arg(it.value());
+    }
+
+    QLabel* statsLabel = new QLabel(statsText);
+    statsLabel->setStyleSheet("background-color: #f0f4f8; padding: 15px; border-radius: 8px; color: #03224c; font-weight: 500;");
+    statsLabel->setMinimumHeight(200);
+    statsLabel->setWordWrap(true);
+
+    QScrollArea* scrollArea = new QScrollArea();
+    scrollArea->setWidget(statsLabel);
+    scrollArea->setWidgetResizable(true);
+
+    layout->addLayout(chartsLayout, 3);
+    layout->addWidget(scrollArea, 1);
+
+    QHBoxLayout* buttonLayout = new QHBoxLayout();
+    QPushButton* pdfBtn = new QPushButton("📄 Exporter PDF");
+    pdfBtn->setStyleSheet("QPushButton { background-color: #1e40af; color: white; padding: 10px; border-radius: 5px; font-weight: bold; }");
+    connect(pdfBtn, &QPushButton::clicked, this, &MainWindow::generateShipAnalyticsPDF);
+    buttonLayout->addWidget(pdfBtn);
+    QPushButton* closeBtn = new QPushButton("Fermer");
+    closeBtn->setStyleSheet("QPushButton { background-color: #03224c; color: white; padding: 10px; border-radius: 5px; font-weight: bold; }");
+    connect(closeBtn, &QPushButton::clicked, analyticsDialog, &QDialog::accept);
+    buttonLayout->addWidget(closeBtn);
+
+    layout->addLayout(buttonLayout);
+    analyticsDialog->exec();
+}
+
+void MainWindow::generateShipAnalyticsPDF()
+{
+    QString fileName = QFileDialog::getSaveFileName(this, "Enregistrer Rapport Navires (PDF)", "", "Fichiers PDF (*.pdf)");
+    if (fileName.isEmpty()) return;
+    if (!fileName.endsWith(".pdf")) fileName += ".pdf";
+
+    QPdfWriter pdfWriter(fileName);
+    pdfWriter.setPageSize(QPageSize::A4);
+    pdfWriter.setResolution(300);
+
+    QPainter painter;
+    if (!painter.begin(&pdfWriter)) {
+        QMessageBox::critical(this, "Erreur", "Impossible de créer le fichier PDF.");
+        return;
+    }
+
+    int pageWidth = pdfWriter.width();
+    int margin = 80;
+    int lineHeight = 40;
+
+    QFont titleFont("Arial", 24, QFont::Bold);
+    QFont headingFont("Arial", 14, QFont::Bold);
+    QFont normalFont("Arial", 11);
+
+    int y = 80;
+
+    // Gather stats
+    int totalShips = tableShips ? tableShips->rowCount() : 0;
+    int totalCapacity = 0;
+    int maxCapacity = 0;
+    int minCapacity = std::numeric_limits<int>::max();
+    QMap<QString, int> shipsByType;
+    QMap<QString, int> shipsByStatus;
+
+    for (int i = 0; tableShips && i < tableShips->rowCount(); ++i) {
+        QString type = tableShips->item(i, 3)->text();
+        QString status = tableShips->item(i, 5)->text();
+        QString capText = tableShips->item(i, 4)->text().replace(" T", "");
+        int cap = capText.toInt();
+        
+        totalCapacity += cap;
+        if (cap > maxCapacity) maxCapacity = cap;
+        if (cap < minCapacity) minCapacity = cap;
+        shipsByType[type]++;
+        shipsByStatus[status]++;
+    }
+
+    double avgCapacity = totalShips > 0 ? static_cast<double>(totalCapacity) / totalShips : 0;
+
+    // TITLE
+    painter.setFont(titleFont);
+    painter.drawText(margin, y, pageWidth - 2*margin, 50, Qt::AlignCenter, "Rapport Statistiques des Navires");
+    y += 60;
+
+    painter.setFont(normalFont);
+    painter.drawText(margin, y, pageWidth - 2*margin, 30, Qt::AlignCenter,
+                     "Généré le: " + QDateTime::currentDateTime().toString("dd/MM/yyyy hh:mm"));
+    y += 50;
+
+    painter.drawLine(margin, y, pageWidth - margin, y);
+    y += 40;
+
+    painter.setFont(headingFont);
+    painter.drawText(margin, y, pageWidth - 2*margin, 30, Qt::AlignLeft, "📊 Statistiques Résumé");
+    y += 50;
+
+    painter.setFont(normalFont);
+    painter.drawText(margin + 40, y, pageWidth - 2*margin - 40, 25, Qt::AlignLeft,
+                     "Total Navires: " + QString::number(totalShips));
+    y += lineHeight;
+    painter.drawText(margin + 40, y, pageWidth - 2*margin - 40, 25, Qt::AlignLeft,
+                     "Capacité Totale: " + QString::number(totalCapacity) + " T");
+    y += lineHeight;
+    painter.drawText(margin + 40, y, pageWidth - 2*margin - 40, 25, Qt::AlignLeft,
+                     "Capacité Moyenne: " + QString::number(static_cast<int>(avgCapacity)) + " T");
+    y += lineHeight;
+    painter.drawText(margin + 40, y, pageWidth - 2*margin - 40, 25, Qt::AlignLeft,
+                     "Capacité Max: " + QString::number(maxCapacity) + " T");
+    y += lineHeight;
+    painter.drawText(margin + 40, y, pageWidth - 2*margin - 40, 25, Qt::AlignLeft,
+                     "Capacité Min: " + QString::number(minCapacity == std::numeric_limits<int>::max() ? 0 : minCapacity) + " T");
+    y += 50;
+
+    painter.drawLine(margin, y, pageWidth - margin, y);
+    y += 40;
+
+    painter.setFont(headingFont);
+    painter.drawText(margin, y, pageWidth - 2*margin, 30, Qt::AlignLeft, "🚢 Répartition par Type");
+    y += 50;
+
+    painter.setFont(normalFont);
+    for (auto it = shipsByType.begin(); it != shipsByType.end(); ++it) {
+        painter.drawText(margin + 40, y, pageWidth - 2*margin - 40, 25, Qt::AlignLeft,
+                         it.key() + ": " + QString::number(it.value()) + " navires");
+        y += 30;
+    }
+    
+    y += 20;
+    painter.drawLine(margin, y, pageWidth - margin, y);
+    y += 40;
+    
+    painter.setFont(headingFont);
+    painter.drawText(margin, y, pageWidth - 2*margin, 30, Qt::AlignLeft, "⚓ Répartition par Statut");
+    y += 50;
+    
+    painter.setFont(normalFont);
+    for (auto it = shipsByStatus.begin(); it != shipsByStatus.end(); ++it) {
+        painter.drawText(margin + 40, y, pageWidth - 2*margin - 40, 25, Qt::AlignLeft,
+                         it.key() + ": " + QString::number(it.value()) + " navires");
+        y += 30;
+    }
+
+    painter.end();
+    QMessageBox::information(this, "Succès", "PDF généré avec succès :\n\n" + fileName);
 }
 
 void MainWindow::onGenerateShipPdf()

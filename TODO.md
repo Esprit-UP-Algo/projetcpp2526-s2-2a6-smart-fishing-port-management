@@ -1,38 +1,40 @@
-# TODO - Make Captures Management like Employee Management
+# TODO - Smart Fishing Port Management
 
 ## Tasks Completed:
-- [x] 1. Updated addedit_capturedialog.cpp - Added Save/Cancel button labels
-- [x] 2. Updated addedit_capturedialog.h - Fixed include structure
-- [x] 3. Updated capturesdialog.cpp - Used AddEditCaptureDialog for add/edit
-- [x] 4. Updated capturesdialog.h - Fixed include structure
-- [x] 5. Updated mainwindow.cpp - Reorganized captures UI to match employee management
-- [x] 6. Added PDF button for each capture row
-- [x] 7. Added generateRandomCaptures() function to auto-populate test data
-- [x] 8. Fixed database connections for edit/delete operations (onEditCaptureClicked, onDeleteCaptureClicked, onEditShipClicked, onDeleteShipClicked)
 
-## Summary of Changes:
-The capture management now matches the employee management interface:
+### Navire (Ship) Management Module:
+- [x] 1. Fixed sidebar navigation - Connected "🚢 Navires" button to showShipsPage()
+- [x] 2. Enhanced onShowShipStats() to match employee analytics:
+   - Added pie chart for ships by type
+   - Added bar chart for ships by status
+   - Added detailed statistics text (total, average capacity, max, min)
+   - Added PDF export button
+- [x] 3. Added generateShipAnalyticsPDF() function for PDF export
 
-1. **Header Layout (Same as employees):**
-   - Search bar with "Rechercher:" label
-   - Sort buttons next to search: "Trier par Date", "Trier par Quantité"
-   - Stats button: "📊 Statistiques"
-   - Add button: "+ Ajouter"
+## Navire Module Features:
 
-2. **Stats Box:**
-   - 5 colored boxes: Types Poissons, Quantité Totale, Moyenne, Max, Navires
+1. **CRUD Complet:**
+   - Ajouter (Add) - Using AddEditShipDialog
+   - Modifier (Edit) - Opens dialog with ship data
+   - Supprimer (Delete) - With confirmation
 
-3. **Table with Action Buttons:**
-   - Each row now has 3 action buttons: Edit (✏️), Delete (🗑️), PDF (📄)
-   - Buttons have proper styling with hover effects
-   - Each button has a tooltip in French
+2. **Recherche:**
+   - Search by name or immatriculation
 
-4. **PDF Export:**
-   - Individual PDF export for each capture
-   - Shows: Navire, Date, Type de Poisson, Quantité
+3. **Tri:**
+   - Sort by capacity (Tri Capacité)
+   - Sort by status (Tri Statut)
 
-5. **Auto-generate Test Data:**
-   - Added generateRandomCaptures() that creates 20 random captures on first run
-   - Prevents duplicates by checking if data already exists
+4. **Statistiques:**
+   - Pie chart: Ships by type
+   - Bar chart: Ships by status
+   - Statistics summary: Total, Average Capacity, Max, Min
+   - PDF export with detailed report
 
-The captures UI now has the same look and feel as employee management.
+5. **Fonctionnalités Avancées:**
+   - Ship history tracking (onShowShipHistory)
+   - Availability notification (onCheckShipAvailability)
+   - Individual ship PDF report (onGenerateShipPdf)
+
+## Summary:
+The Navire (Ship) management module is now complete with all CRUD operations, search, sort, and statistics features matching the employee management interface style.

@@ -62,6 +62,8 @@ private slots:
     void onShowCaptureStats();
     void onDetectAnomalies(); // Advanced 1
     void onComparePeriods();  // Advanced 2
+    void onDetectFraud();     // Fraud Detection
+    void onRecommendFishingZones(); // Fishing Zone Recommendation
     void onExportCapturesPdf();
 
     // Ship Slots
@@ -87,6 +89,7 @@ private:
     void updateEmployeeStats();
     void updateSalaryStats();
     void generateAnalyticsPDF();
+    void generateShipAnalyticsPDF();
     
     // Capture Helpers
     void setupCapturesUi();

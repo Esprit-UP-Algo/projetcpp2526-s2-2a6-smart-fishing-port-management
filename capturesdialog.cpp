@@ -5,10 +5,15 @@
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QPushButton>
+#include "fishingzonesdialog.h"
+#ifdef HAVE_QT_WEBENGINE
+#include "fishingzones3ddialog.h"
+#endif
 #include <QHeaderView>
 #include <QFormLayout>
 #include <QLineEdit>
 #include <QDateEdit>
+#include <QDate>
 #include <QSpinBox>
 #include <QMessageBox>
 #include <QSqlQuery>
@@ -24,7 +29,7 @@ CapturesDialog::CapturesDialog(QWidget *parent)
 {
     setupUI();
 
-    Connection::instance()->createconnect();
+    Connection::instance()->createConnect();
     ensureTableExists();
     loadData();
 }
@@ -46,6 +51,28 @@ void CapturesDialog::setupUI()
     searchLayout->addWidget(lineSearch);
     main->addLayout(searchLayout);
 
+    // Filters: type and date range
+    QHBoxLayout *filterLayout = new QHBoxLayout();
+    QLabel *lblType = new QLabel("Type:", this);
+    comboTypeFilter = new QComboBox(this);
+    comboTypeFilter->addItem("Tous");
+    QLabel *lblFrom = new QLabel("De:", this);
+    dateFrom = new QDateEdit(this);
+    dateFrom->setCalendarPopup(true);
+    QLabel *lblTo = new QLabel("A:", this);
+    dateTo = new QDateEdit(this);
+    dateTo->setCalendarPopup(true);
+    dateTo->setDate(QDate::currentDate());
+    dateFrom->setDate(QDate::currentDate().addDays(-30));
+    filterLayout->addWidget(lblType);
+    filterLayout->addWidget(comboTypeFilter);
+    filterLayout->addWidget(lblFrom);
+    filterLayout->addWidget(dateFrom);
+    filterLayout->addWidget(lblTo);
+    filterLayout->addWidget(dateTo);
+    filterLayout->addStretch();
+    main->addLayout(filterLayout);
+
     // Stats section
     QHBoxLayout *statsLayout = new QHBoxLayout();
     statTotal = new QLabel("Total: 0", this);
@@ -54,11 +81,17 @@ void CapturesDialog::setupUI()
     statMaxQuantite = new QLabel("Max: 0", this);
     statNavireCount = new QLabel("Navires: 0", this);
     
-    statTotal->setStyleSheet("background-color: #e3f2fd; padding: 8px; border-radius: 5px; font-weight: bold;");
-    statTotalQuantite->setStyleSheet("background-color: #e8f5e9; padding: 8px; border-radius: 5px; font-weight: bold;");
-    statMoyenneQuantite->setStyleSheet("background-color: #fff3e0; padding: 8px; border-radius: 5px; font-weight: bold;");
-    statMaxQuantite->setStyleSheet("background-color: #fce4ec; padding: 8px; border-radius: 5px; font-weight: bold;");
-    statNavireCount->setStyleSheet("background-color: #f3e5f5; padding: 8px; border-radius: 5px; font-weight: bold;");
+    statTotal->setProperty("type", "stat-blue");
+    statTotalQuantite->setProperty("type", "stat-green");
+    statMoyenneQuantite->setProperty("type", "stat-orange");
+    statMaxQuantite->setProperty("type", "stat-purple");
+    statNavireCount->setProperty("type", "stat-blue");
+    
+    for (auto lbl : {statTotal, statTotalQuantite, statMoyenneQuantite, statMaxQuantite, statNavireCount}) {
+        lbl->setObjectName("statCard");
+        lbl->style()->unpolish(lbl);
+        lbl->style()->polish(lbl);
+    }
     
     statsLayout->addWidget(statTotal);
     statsLayout->addWidget(statTotalQuantite);
@@ -69,30 +102,43 @@ void CapturesDialog::setupUI()
 
     // Table
     table = new QTableWidget(this);
+    table->setObjectName("tableCapturesDialog");
     table->setColumnCount(6);
     table->setHorizontalHeaderLabels({"ID", "Navire", "Date_Capture", "Type_Poisson", "Quantite", "Actions"});
     table->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+    table->verticalHeader()->setVisible(false);
+    table->verticalHeader()->setDefaultSectionSize(60);
     table->setSelectionBehavior(QAbstractItemView::SelectRows);
     table->setEditTriggers(QAbstractItemView::NoEditTriggers);
     main->addWidget(table, 1);
 
     // Buttons
     QHBoxLayout *buttons = new QHBoxLayout();
-    QPushButton *btnAdd = new QPushButton("Ajouter", this);
-    QPushButton *btnEdit = new QPushButton("Modifier", this);
-    QPushButton *btnDelete = new QPushButton("Supprimer", this);
-    QPushButton *btnSortNavire = new QPushButton("Trier par Navire", this);
-    QPushButton *btnSortDate = new QPushButton("Trier par Date", this);
-    QPushButton *btnSortQuantite = new QPushButton("Trier par Quantite", this);
-    QPushButton *btnClose = new QPushButton("Fermer", this);
+    buttons->setSpacing(10);
     
-    btnAdd->setStyleSheet("QPushButton { background-color: #4CAF50; color: white; padding: 8px; border-radius: 5px; font-weight: bold; }");
-    btnEdit->setStyleSheet("QPushButton { background-color: #2196F3; color: white; padding: 8px; border-radius: 5px; font-weight: bold; }");
-    btnDelete->setStyleSheet("QPushButton { background-color: #F44336; color: white; padding: 8px; border-radius: 5px; font-weight: bold; }");
-    btnSortNavire->setStyleSheet("QPushButton { background-color: #9C27B0; color: white; padding: 8px; border-radius: 5px; }");
-    btnSortDate->setStyleSheet("QPushButton { background-color: #FF9800; color: white; padding: 8px; border-radius: 5px; }");
-    btnSortQuantite->setStyleSheet("QPushButton { background-color: #00BCD4; color: white; padding: 8px; border-radius: 5px; }");
-    btnClose->setStyleSheet("QPushButton { background-color: #607D8B; color: white; padding: 8px; border-radius: 5px; }");
+    QPushButton *btnAdd = new QPushButton("➕ Ajouter", this);
+    btnAdd->setObjectName("btnAdd");
+    
+    QPushButton *btnEdit = new QPushButton("✏️ Modifier", this);
+    btnEdit->setObjectName("btnEdit");
+    
+    QPushButton *btnDelete = new QPushButton("🗑️ Supprimer", this);
+    btnDelete->setObjectName("btnDelete");
+    
+    QPushButton *btnSortNavire = new QPushButton("Trier par Navire", this);
+    btnSortNavire->setObjectName("btnSecondary");
+    
+    QPushButton *btnSortDate = new QPushButton("Trier par Date", this);
+    btnSortDate->setObjectName("btnSecondary");
+    
+    QPushButton *btnSortQuantite = new QPushButton("Trier par Quantite", this);
+    btnSortQuantite->setObjectName("btnSecondary");
+    
+    QPushButton *btnClose = new QPushButton("✖️ Fermer", this);
+    btnClose->setObjectName("btnCancel");
+    
+    QPushButton *btnZones = new QPushButton("🌐 Zone de pêche", this);
+    btnZones->setObjectName("btnSecondary");
     
     buttons->addWidget(btnAdd);
     buttons->addWidget(btnEdit);
@@ -101,6 +147,7 @@ void CapturesDialog::setupUI()
     buttons->addWidget(btnSortNavire);
     buttons->addWidget(btnSortDate);
     buttons->addWidget(btnSortQuantite);
+    buttons->addWidget(btnZones);
     buttons->addStretch();
     buttons->addWidget(btnClose);
     main->addLayout(buttons);
@@ -111,8 +158,139 @@ void CapturesDialog::setupUI()
     connect(btnSortNavire, &QPushButton::clicked, this, &CapturesDialog::onSortByNavire);
     connect(btnSortDate, &QPushButton::clicked, this, &CapturesDialog::onSortByDate);
     connect(btnSortQuantite, &QPushButton::clicked, this, &CapturesDialog::onSortByQuantite);
+    connect(btnZones, &QPushButton::clicked, this, &CapturesDialog::onShowZones);
     connect(btnClose, &QPushButton::clicked, this, &CapturesDialog::closeClicked);
     connect(lineSearch, &QLineEdit::textChanged, this, &CapturesDialog::onSearch);
+}
+
+void CapturesDialog::onShowZones()
+{
+    // Enhanced recommendation: compute per-navire metrics from captures and rank by a simple score
+    QSqlQuery q;
+    if (!q.exec("SELECT Navire, Date_Capture, Type_Poisson, Quantite FROM captures")) {
+        QMessageBox::warning(this, "Zones", "Impossible de lire les captures: " + q.lastError().text());
+        return;
+    }
+
+    struct Metrics {
+        int totalAll = 0;
+        int totalLast30 = 0;
+        QMap<QString,int> typeCounts;
+    };
+
+    QMap<QString, Metrics> map;
+    QDate from = dateFrom ? dateFrom->date() : QDate::currentDate().addDays(-30);
+    QDate to = dateTo ? dateTo->date() : QDate::currentDate();
+    if (from > to) std::swap(from, to);
+    QString selectedType = comboTypeFilter ? comboTypeFilter->currentText() : QString("Tous");
+    QDate cutoff = QDate::currentDate().addDays(-30);
+
+    while (q.next()) {
+        QString nav = q.value(0).toString();
+        QDate d = QDate::fromString(q.value(1).toString(), Qt::ISODate);
+        QString type = q.value(2).toString();
+        int qty = q.value(3).toInt();
+
+        // apply filters: type and date range
+        if (!selectedType.isEmpty() && selectedType != "Tous" && type != selectedType) continue;
+        if (d.isValid() && (d < from || d > to)) continue;
+
+        Metrics &m = map[nav];
+        m.totalAll += qty;
+        if (d.isValid() && d >= cutoff) m.totalLast30 += qty;
+        m.typeCounts[type] = m.typeCounts.value(type, 0) + 1;
+    }
+
+    // compute score and prepare list
+    struct ZoneScore { QString nav; double score; int totalLast30; int totalAll; QString topType; int topTypeCount; };
+    QList<ZoneScore> scores;
+    for (auto it = map.constBegin(); it != map.constEnd(); ++it) {
+        const QString &nav = it.key();
+        const Metrics &m = it.value();
+        // find most common type for this navire
+        QString bestType;
+        int bestCount = 0;
+        for (auto tIt = m.typeCounts.constBegin(); tIt != m.typeCounts.constEnd(); ++tIt) {
+            if (tIt.value() > bestCount) { bestType = tIt.key(); bestCount = tIt.value(); }
+        }
+        // simple scoring: recent activity weighted higher
+        double score = m.totalLast30 * 3 + m.totalAll * 1 + bestCount * 2;
+        scores.append({nav, score, m.totalLast30, m.totalAll, bestType, bestCount});
+    }
+
+    std::sort(scores.begin(), scores.end(), [](const ZoneScore &a, const ZoneScore &b){ return a.score > b.score; });
+
+    // Try to read real coordinates (lat/lon) from `navire` table if available.
+    QMap<QString, QPointF> coordsLatLon; // x=lon, y=lat
+    QSqlQuery infoQ;
+    bool hasLat = false, hasLon = false;
+    if (infoQ.exec("PRAGMA table_info(navire)")) {
+        while (infoQ.next()) {
+            QString col = infoQ.value(1).toString().toLower();
+            if (col == "lat" || col == "latitude") hasLat = true;
+            if (col == "lon" || col == "lng" || col == "longitude") hasLon = true;
+        }
+    }
+
+    if (hasLat && hasLon) {
+        QSqlQuery q2;
+        if (q2.exec("SELECT nom, lat, lon FROM navire")) {
+            while (q2.next()) {
+                QString nom = q2.value(0).toString();
+                double lat = q2.value(1).toDouble();
+                double lon = q2.value(2).toDouble();
+                coordsLatLon[nom] = QPointF(lon, lat);
+            }
+        }
+    }
+
+    // Local lightweight zone representation used for both 3D and 2D dialogs
+    struct LocalZone { QString name; double lat; double lon; QString reason; };
+    QList<LocalZone> localZones;
+    int limit = qMin(3, scores.size());
+    for (int i = 0; i < limit; ++i) {
+        const ZoneScore &z = scores[i];
+        QString reason = QString("Activite recente: %1, Total: %2, Poisson frequent: %3 (%4)")
+                         .arg(z.totalLast30).arg(z.totalAll).arg(z.topType.isEmpty() ? QString("N/A") : z.topType).arg(z.topTypeCount);
+
+        LocalZone lz;
+        lz.name = z.nav;
+        lz.reason = reason;
+        if (coordsLatLon.contains(z.nav)) {
+            lz.lon = coordsLatLon[z.nav].x();
+            lz.lat = coordsLatLon[z.nav].y();
+        } else {
+            double baseLon = 10.0 + (i + 1) * 0.5;
+            double baseLat = 36.5 + (i + 1) * 0.3;
+            lz.lon = baseLon; lz.lat = baseLat;
+        }
+        localZones.append(lz);
+    }
+
+    if (localZones.isEmpty()) {
+        QMessageBox::information(this, "Zones", "Aucune capture disponible pour recommander des zones.");
+        return;
+    }
+
+#ifdef HAVE_QT_WEBENGINE
+    // Convert to ZoneEntry3D and open WebEngine 3D dialog
+    QList<ZoneEntry3D> entries3d;
+    for (const LocalZone &lz : localZones) {
+        ZoneEntry3D e; e.name = lz.name; e.lat = lz.lat; e.lon = lz.lon; e.reason = lz.reason;
+        entries3d.append(e);
+    }
+    FishingZones3DDialog dlg(entries3d, this);
+    dlg.exec();
+#else
+    // Fallback: convert to 2D ZoneEntry and show the existing 2D dialog
+    QList<ZoneEntry> entries2d;
+    for (const LocalZone &lz : localZones) {
+        ZoneEntry e; e.name = lz.name; e.pos = QPointF(lz.lon, lz.lat); e.reason = lz.reason;
+        entries2d.append(e);
+    }
+    FishingZonesDialog dlg(entries2d, this);
+    dlg.exec();
+#endif
 }
 
 void CapturesDialog::ensureTableExists()
@@ -139,6 +317,8 @@ void CapturesDialog::loadData()
         return;
     }
 
+    QSet<QString> types;
+
     while (q.next()) {
         int row = table->rowCount();
         table->insertRow(row);
@@ -152,6 +332,7 @@ void CapturesDialog::loadData()
                 table->setItem(row, 0, idItem);
             } else {
                 QTableWidgetItem *item = new QTableWidgetItem(q.value(col).toString());
+                if (col == 3) types.insert(item->text());
                 table->setItem(row, col, item);
             }
         }
@@ -161,14 +342,26 @@ void CapturesDialog::loadData()
         btnEdit->setToolTip("Modifier");
         btnEdit->setStyleSheet("QPushButton { background-color: #2196F3; color: white; border: none; border-radius: 3px; padding: 3px 8px; }");
         btnEdit->setMaximumWidth(40);
-        connect(btnEdit, &QPushButton::clicked, this, [this, row]() {
-            table->selectRow(row);
-            onEdit();
+        // Capture the actual ID stored in the row's UserRole to avoid relying on row index
+        int recordId = q.value(0).toInt();
+        connect(btnEdit, &QPushButton::clicked, this, [this, recordId]() {
+            editCaptureById(recordId);
         });
         table->setCellWidget(row, 5, btnEdit);
     }
     table->setColumnHidden(0, false);
     updateStats();
+
+    // populate type filter combobox with distinct types
+    if (comboTypeFilter) {
+        comboTypeFilter->blockSignals(true);
+        comboTypeFilter->clear();
+        comboTypeFilter->addItem("Tous");
+        QList<QString> listTypes = types.values();
+        std::sort(listTypes.begin(), listTypes.end());
+        for (const QString &t : listTypes) comboTypeFilter->addItem(t);
+        comboTypeFilter->blockSignals(false);
+    }
 }
 
 int CapturesDialog::selectedCaptureId() const
@@ -332,6 +525,47 @@ void CapturesDialog::onEdit()
     int id = selectedCaptureId();
     if (id < 0) {
         QMessageBox::warning(this, "Selection requise", "Veuillez selectionner une capture a modifier.");
+        return;
+    }
+
+    QSqlQuery q;
+    q.prepare("SELECT Navire, Date_Capture, Type_Poisson, Quantite FROM captures WHERE ID_Capture = ?");
+    q.addBindValue(id);
+    if (!q.exec() || !q.next()) {
+        QMessageBox::critical(this, "Erreur", "Impossible de charger la capture: " + q.lastError().text());
+        return;
+    }
+
+    QString curNavire = q.value(0).toString();
+    QDate curDate = QDate::fromString(q.value(1).toString(), Qt::ISODate);
+    QString curType = q.value(2).toString();
+    int curQuant = q.value(3).toInt();
+
+    AddEditCaptureDialog dlg(this, true);
+    dlg.setCaptureData(curNavire, curDate, curType, curQuant);
+    dlg.setWindowTitle("Modifier la capture");
+
+    if (dlg.exec() == QDialog::Accepted) {
+        QSqlQuery u;
+        u.prepare("UPDATE captures SET Navire = ?, Date_Capture = ?, Type_Poisson = ?, Quantite = ? WHERE ID_Capture = ?");
+        u.addBindValue(dlg.getNavire());
+        u.addBindValue(dlg.getDateCapture().toString(Qt::ISODate));
+        u.addBindValue(dlg.getTypePoisson());
+        u.addBindValue(dlg.getQuantite());
+        u.addBindValue(id);
+        if (!u.exec()) {
+            QMessageBox::critical(this, "Erreur", "Impossible de modifier la capture: " + u.lastError().text());
+        } else {
+            loadData();
+            QMessageBox::information(this, "Succès", "Capture modifiée avec succès !");
+        }
+    }
+}
+
+void CapturesDialog::editCaptureById(int id)
+{
+    if (id < 0) {
+        QMessageBox::warning(this, "Selection requise", "Identifiant invalide pour la modification.");
         return;
     }
 

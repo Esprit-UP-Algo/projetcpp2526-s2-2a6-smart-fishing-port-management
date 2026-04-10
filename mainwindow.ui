@@ -6,358 +6,248 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1100</width>
-    <height>650</height>
+    <width>1200</width>
+    <height>700</height>
    </rect>
   </property>
+  <property name="minimumSize">
+   <size>
+    <width>900</width>
+    <height>600</height>
+   </size>
+  </property>
   <property name="windowTitle">
-   <string>⚓Fishtech</string>
+   <string>⚓ FishTech - Gestion Portuaire</string>
   </property>
   <property name="styleSheet">
    <string>
-QMainWindow {
-    background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #f0f4f8, stop:1 #e0eaf5);
-}
+    * {
+        font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
+        outline: none;
+    }
+    
+    QMainWindow, QDialog {
+        background-color: #f0f9ff;
+    }
+    
+    QLabel {
+        color: #0c4a6e;
+        font-size: 14px;
+    }
+    
+    QLabel#pageTitle {
+        font-size: 32px;
+        font-weight: 800;
+        color: #0369a1;
+        padding: 10px 0;
+        letter-spacing: -1px;
+    }
+    
+    QLabel#sectionTitle {
+        font-size: 20px;
+        font-weight: 700;
+        color: #0284c7;
+        margin-top: 10px;
+    }
+    
+    QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox, QDateEdit, QTextEdit {
+        background-color: #ffffff;
+        border: 2px solid #e0f2fe;
+        border-radius: 12px;
+        padding: 10px 15px;
+        font-size: 14px;
+        color: #0369a1;
+        selection-background-color: #7dd3fc;
+    }
+    
+    QLineEdit:hover, QComboBox:hover, QSpinBox:hover {
+        border: 2px solid #bae6fd;
+    }
+    
+    QLineEdit:focus, QComboBox:focus, QSpinBox:focus {
+        border: 2px solid #0ea5e9;
+        background-color: #ffffff;
+    }
+    
+    QPushButton {
+        background-color: #0ea5e9;
+        color: white;
+        border: none;
+        border-radius: 12px;
+        padding: 12px 24px;
+        font-weight: 700;
+        font-size: 14px;
+    }
+    
+    QPushButton:hover {
+        background-color: #0284c7;
+        margin-top: -2px;
+        margin-bottom: 2px;
+    }
+    
+    QPushButton:pressed {
+        background-color: #0369a1;
+        margin-top: 0px;
+        margin-bottom: 0px;
+    }
+    
+    QPushButton:disabled {
+        background-color: #e0f2fe;
+        color: #7dd3fc;
+    }
+    
+    QPushButton#btnAdd {
+        background-color: #06b6d4;
+    }
+    QPushButton#btnAdd:hover {
+        background-color: #0891b2;
+    }
+    
+    QPushButton#btnEdit {
+        background-color: #38bdf8;
+        padding: 8px 16px;
+    }
+    
+    QPushButton#btnDelete {
+        background-color: #f43f5e;
+        padding: 8px 16px;
+    }
+    
+    QPushButton#btnSecondary {
+        background-color: #f0f9ff;
+        border: 2px solid #e0f2fe;
+        color: #0284c7;
+    }
+    QPushButton#btnSecondary:hover {
+        background-color: #e0f2fe;
+        border-color: #bae6fd;
+    }
 
-/* Login Screen Styles */
-QDialog {
-    background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #f0f4f8, stop:1 #e0eaf5);
-}
+    QWidget#sidebar {
+        background-color: #ffffff;
+        border-right: 1px solid #e0f2fe;
+    }
+    
+    QLabel#logo {
+        color: #0ea5e9;
+        font-size: 26px;
+        font-weight: 900;
+        padding: 40px 20px;
+        border: none;
+    }
+    
+    QPushButton#sidebarBtn, QWidget#sidebar QPushButton {
+        background-color: transparent;
+        color: #64748b;
+        text-align: left;
+        padding: 14px 24px;
+        margin: 4px 16px;
+        border-radius: 14px;
+        font-size: 15px;
+        font-weight: 600;
+        border: none;
+    }
+    
+    QPushButton#sidebarBtn:hover, QWidget#sidebar QPushButton:hover {
+        background-color: #f0f9ff;
+        color: #0ea5e9;
+    }
+    
+    QPushButton#sidebarBtn:checked, QWidget#sidebar QPushButton[active="true"] {
+        background-color: #e0f2fe;
+        color: #0369a1;
+        font-weight: 800;
+    }
+    
+    QPushButton#btnLogout {
+        background-color: #fff1f2;
+        color: #e11d48;
+        margin-top: 20px;
+    }
+    
+    QPushButton#btnLogout:hover {
+        background-color: #ffe4e6;
+        color: #be123c;
+    }
+    
+    QTableWidget {
+        background-color: #ffffff;
+        border: 2px solid #e0f2fe;
+        border-radius: 16px;
+        gridline-color: #f0f9ff;
+        selection-background-color: #f0f9ff;
+        selection-color: #0369a1;
+        outline: none;
+    }
+    
+    QTableWidget::item {
+        padding: 16px;
+        border-bottom: 1px solid #f0f9ff;
+        color: #0c4a6e;
+    }
+    
+    QHeaderView::section {
+        background-color: #ffffff;
+        color: #64748b;
+        padding: 15px;
+        border: none;
+        border-bottom: 2px solid #e0f2fe;
+        font-weight: 800;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    QLabel.statCard {
+        background-color: #ffffff;
+        border: 2px solid #e0f2fe;
+        border-radius: 20px;
+        padding: 24px;
+        font-weight: 700;
+    }
+    
+    QLabel[type="stat-blue"] {
+        background-color: #f0f9ff;
+        color: #0369a1;
+        border: 2px solid #bae6fd;
+    }
+    QLabel[type="stat-green"] {
+        background-color: #f0fdf4;
+        color: #166534;
+        border: 2px solid #bbf7d0;
+    }
+    QLabel[type="stat-orange"] {
+        background-color: #fff7ed;
+        color: #9a3412;
+        border: 2px solid #fed7aa;
+    }
+    QLabel[type="stat-purple"] {
+        background-color: #faf5ff;
+        color: #581c87;
+        border: 2px solid #e9d5ff;
+    }
 
-QWidget#headerContainer {
-    background-color: #03224c;
-    border-radius: 12px;
-}
-
-QLabel#labelTitle {
-    color: #03224c;
-    font-size: 28px;
-    font-weight: bold;
-}
-
-QLabel#labelSubtitle {
-    color: #e0f0ff;
-    font-size: 14px;
-}
-
-/* Sidebar */
-#sidebar {
-    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #03224c, stop:1 #0d47a1);
-    color: white;
-}
-
-#sidebar QLabel {
-    color: white;
-    font-size: 18px;
-    font-weight: bold;
-    padding: 20px 0px;
-    border-bottom: 3px solid #2196F3;
-}
-
-#sidebar QPushButton {
-    color: white;
-    background-color: #03224c;
-    border: none;
-    text-align: left;
-    padding: 14px 16px;
-    font-size: 13px;
-    font-weight: 500;
-    border-radius: 6px;
-    margin: 4px 8px;
-}
-
-#sidebar QPushButton:hover {
-    background-color: #1565c0;
-    border-left: 4px solid #64b5f6;
-    padding-left: 12px;
-    color: white;
-}
-
-#sidebar QPushButton:pressed {
-    background-color: #0d47a1;
-    color: white;
-}
-
-#sidebar QPushButton#btnLogout {
-    margin-top: 20px;
-}
-
-#sidebar QPushButton#btnLogout:hover {
-    background-color: #1565c0;
-    color: white;
-}
-
-/* Labels */
-QLabel {
-    color: #1e3a5f;
-    font-size: 13px;
-    font-weight: 500;
-}
-
-/* Input Fields */
-QLineEdit {
-    background-color: white;
-    border: 2px solid #cbd5e1;
-    border-radius: 8px;
-    padding: 10px;
-    font-size: 13px;
-    color: #1e3a5f;
-}
-
-QLineEdit:focus {
-    border: 2px solid #03224c;
-    background-color: #f0f9ff;
-}
-
-QLineEdit::placeholder {
-    color: #94a3b8;
-}
-
-QComboBox {
-    background-color: white;
-    border: 2px solid #cbd5e1;
-    border-radius: 8px;
-    padding: 10px;
-    font-size: 13px;
-    color: #1e3a5f;
-}
-
-QComboBox:focus {
-    border: 2px solid #03224c;
-    background-color: #f0f9ff;
-}
-
-/* Buttons */
-QPushButton {
-    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #03224c, stop:1 #1e40af);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    padding: 10px;
-    font-weight: bold;
-    font-size: 13px;
-}
-
-QPushButton:hover {
-    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #1e40af, stop:1 #1d4ed8);
-}
-
-QPushButton:pressed {
-    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #1d4ed8, stop:1 #1e3a8a);
-}
-
-QPushButton#btnCancel {
-    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #888888, stop:1 #666666);
-}
-
-QPushButton#btnCancel:hover {
-    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #666666, stop:1 #555555);
-}
-
-QPushButton#btnForgotPassword {
-    background: transparent;
-    color: #1e3a5f;
-    border: none;
-    text-decoration: underline;
-}
-
-QPushButton#btnForgotPassword:hover {
-    color: #03224c;
-}
-
-/* Table */
-QTableWidget {
-    background: white;
-    border: 1px solid #e2e8f0;
-    gridline-color: #e2e8f0;
-}
-
-QHeaderView::section {
-    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #03224c, stop:1 #1e40af);
-    color: white;
-    padding: 8px;
-    border: none;
-    font-weight: bold;
-    height: 35px;
-    width: 180px;
-}
-
-QTableWidget::item {
-    padding: 6px;
-    height: 35px;
-    width: 180px;
-    color: #1e3a5f;
-    background-color: white;
-}
-
-QTableWidget::item:hover {
-    background-color: #f0f4f8;
-}
-
-QTableWidget::item:selected {
-    background-color: #dbeafe;
-    color: #1e3a5f;
-}
-
-/* GroupBox */
-QGroupBox { 
-    border: 2px solid #03224c; 
-    border-radius: 12px; 
-    margin-top: 15px; 
-    padding-top: 15px; 
-    background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #f8fbff, stop:1 #e8f1ff);
-} 
-
-QGroupBox::title { 
-    subcontrol-origin: margin; 
-    left: 10px; 
-    padding: 0 5px 0 5px; 
-    color: #03224c; 
-    font-weight: bold; 
-    font-size: 14px;
-}
+    QScrollBar:vertical {
+        border: none;
+        background: #f8fafc;
+        width: 10px;
+        margin: 0;
+    }
+    QScrollBar::handle:vertical {
+        background: #e0f2fe;
+        border-radius: 5px;
+        min-height: 40px;
+    }
+    QScrollBar::handle:vertical:hover {
+        background: #bae6fd;
+    }
    </string>
   </property>
+  
   <widget class="QStackedWidget" name="stackedWidget">
-   <!-- PAGE 0: LOGIN SCREEN -->
+   <!-- PAGE DE CONNEXION -->
    <widget class="QWidget" name="loginPage">
     <layout class="QVBoxLayout" name="loginLayout">
-     <property name="leftMargin">
-      <number>40</number>
-     </property>
-     <property name="topMargin">
-      <number>30</number>
-     </property>
-     <property name="rightMargin">
-      <number>40</number>
-     </property>
-     <property name="bottomMargin">
-      <number>30</number>
-     </property>
-     <item>
-      <widget class="QLabel" name="loginTitle">
-       <property name="text">
-        <string>⚓Fishtech</string>
-       </property>
-       <property name="alignment">
-        <set>Qt::AlignCenter</set>
-       </property>
-       <property name="styleSheet">
-        <string>font-size: 28px; font-weight: bold; color: #03224c;</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QLabel" name="loginSubtitle">
-       <property name="text">
-        <string>Connexion au système</string>
-       </property>
-       <property name="alignment">
-        <set>Qt::AlignCenter</set>
-       </property>
-       <property name="styleSheet">
-        <string>color: #e0f0ff; font-size: 14px;</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <spacer name="loginSpacerTop">
-       <property name="orientation">
-        <enum>Qt::Vertical</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>20</width>
-         <height>40</height>
-        </size>
-       </property>
-      </spacer>
-     </item>
-     <item>
-      <layout class="QFormLayout" name="loginFormLayout">
-       <property name="horizontalSpacing">
-        <number>15</number>
-       </property>
-       <property name="verticalSpacing">
-        <number>20</number>
-       </property>
-       <item row="0" column="0">
-        <widget class="QLabel" name="loginEmailLabel">
-         <property name="text">
-          <string>Email</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="1">
-        <widget class="QLineEdit" name="lineUsername">
-         <property name="placeholderText">
-          <string>Entrer votre email</string>
-         </property>
-         <property name="minimumHeight">
-          <number>35</number>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="0">
-        <widget class="QLabel" name="loginPasswordLabel">
-         <property name="text">
-          <string>Mot de passe</string>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="1">
-        <widget class="QLineEdit" name="linePassword">
-         <property name="echoMode">
-          <enum>QLineEdit::Password</enum>
-         </property>
-         <property name="placeholderText">
-          <string>Entrer votre mot de passe</string>
-         </property>
-         <property name="minimumHeight">
-          <number>35</number>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </item>
-     <item>
-      <spacer name="loginSpacerBottom">
-       <property name="orientation">
-        <enum>Qt::Vertical</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>20</width>
-         <height>40</height>
-        </size>
-       </property>
-      </spacer>
-     </item>
-     <item>
-      <widget class="QPushButton" name="btnLogin">
-       <property name="text">
-        <string>Se connecter</string>
-       </property>
-       <property name="minimumHeight">
-        <number>45</number>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="btnForgotPassword">
-       <property name="text">
-        <string>Mot de passe oublié?</string>
-       </property>
-       <property name="minimumHeight">
-        <number>35</number>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </widget>
-   <!-- PAGE 1: EMPLOYEES SCREEN -->
-   <widget class="QWidget" name="employeesPage">
-    <layout class="QHBoxLayout" name="employeesMainLayout">
      <property name="spacing">
       <number>0</number>
      </property>
@@ -373,21 +263,274 @@ QGroupBox::title {
      <property name="bottomMargin">
       <number>0</number>
      </property>
-     <!-- SIDEBAR -->
+     
      <item>
-      <widget class="QWidget" name="sidebar">
-       <property name="minimumWidth">
-        <number>220</number>
-       </property>
-       <property name="autoFillBackground">
-        <bool>true</bool>
-       </property>
+      <widget class="QWidget" name="loginContainer" native="true">
        <property name="styleSheet">
-        <string>#sidebar { background-color: #03224c; }</string>
+        <string>
+         #loginContainer {
+             background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #0f172a, stop:1 #1e293b);
+         }
+         #loginCard {
+             background-color: white;
+             border-radius: 20px;
+         }
+         #loginTitle {
+             font-size: 32px;
+             font-weight: 800;
+             color: #1e40af;
+         }
+         #loginSubtitle {
+             font-size: 14px;
+             color: #64748b;
+         }
+        </string>
+       </property>
+       <layout class="QVBoxLayout" name="verticalLayout_2">
+        <item>
+         <spacer name="verticalSpacer_2">
+          <property name="orientation">
+           <enum>Qt::Vertical</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>40</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout">
+          <item>
+           <spacer name="horizontalSpacer">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+          <item>
+           <widget class="QWidget" name="loginCard" native="true">
+            <property name="minimumSize">
+             <size>
+              <width>450</width>
+              <height>500</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>450</width>
+              <height>500</height>
+             </size>
+            </property>
+            <layout class="QVBoxLayout" name="verticalLayout_3">
+             <property name="spacing">
+              <number>20</number>
+             </property>
+             <property name="leftMargin">
+              <number>40</number>
+             </property>
+             <property name="topMargin">
+              <number>40</number>
+             </property>
+             <property name="rightMargin">
+              <number>40</number>
+             </property>
+             <property name="bottomMargin">
+              <number>40</number>
+             </property>
+             <item>
+              <widget class="QLabel" name="loginTitle">
+               <property name="text">
+                <string>⚓ FishTech</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="loginSubtitle">
+               <property name="text">
+                <string>Connectez-vous pour continuer</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <spacer name="verticalSpacer_4">
+               <property name="orientation">
+                <enum>Qt::Vertical</enum>
+               </property>
+               <property name="sizeType">
+                <enum>QSizePolicy::Fixed</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>20</width>
+                 <height>20</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
+             <item>
+              <widget class="QLabel" name="labelEmail">
+               <property name="text">
+                <string>Adresse Email</string>
+               </property>
+               <property name="styleSheet">
+                <string>font-weight: 600; color: #475569;</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLineEdit" name="lineEmail">
+               <property name="placeholderText">
+                <string>votre@email.com</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="labelPassword">
+               <property name="text">
+                <string>Mot de passe</string>
+               </property>
+               <property name="styleSheet">
+                <string>font-weight: 600; color: #475569;</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLineEdit" name="linePassword">
+               <property name="echoMode">
+                <enum>QLineEdit::Password</enum>
+               </property>
+               <property name="placeholderText">
+                <string>••••••••</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="btnLogin">
+               <property name="minimumSize">
+                <size>
+                 <width>0</width>
+                 <height>50</height>
+                </size>
+               </property>
+               <property name="text">
+                <string>Se connecter</string>
+               </property>
+               <property name="cursor">
+                <set>Qt::PointingHandCursor</set>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="btnForgotPassword">
+               <property name="text">
+                <string>Mot de passe oublié ?</string>
+               </property>
+               <property name="styleSheet">
+                <string>background: transparent; color: #3b82f6; font-weight: 600;</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <spacer name="verticalSpacer_3">
+               <property name="orientation">
+                <enum>Qt::Vertical</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>20</width>
+                 <height>40</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <spacer name="horizontalSpacer_2">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <spacer name="verticalSpacer">
+          <property name="orientation">
+           <enum>Qt::Vertical</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>40</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+   
+   <!-- PAGE EMPLOYÉS -->
+   <widget class="QWidget" name="employeesPage">
+    <layout class="QHBoxLayout" name="mainLayout">
+     <property name="spacing">
+      <number>0</number>
+     </property>
+     <property name="leftMargin">
+      <number>0</number>
+     </property>
+     <property name="topMargin">
+      <number>0</number>
+     </property>
+     <property name="rightMargin">
+      <number>0</number>
+     </property>
+     <property name="bottomMargin">
+      <number>0</number>
+     </property>
+     
+     <!-- BARRE LATÉRALE -->
+     <item>
+      <widget class="QWidget" name="sidebar" native="true">
+       <property name="minimumSize">
+        <size>
+         <width>250</width>
+         <height>0</height>
+        </size>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>250</width>
+         <height>16777215</height>
+        </size>
        </property>
        <layout class="QVBoxLayout" name="sidebarLayout">
         <property name="spacing">
-         <number>0</number>
+         <number>5</number>
         </property>
         <property name="leftMargin">
          <number>0</number>
@@ -401,380 +544,448 @@ QGroupBox::title {
         <property name="bottomMargin">
          <number>0</number>
         </property>
+        
         <item>
-         <widget class="QLabel" name="labelLogo">
+         <widget class="QLabel" name="logo">
           <property name="text">
-           <string>⚓Fishtech</string>
+           <string>⚓ FishTech</string>
           </property>
           <property name="alignment">
-           <set>Qt::AlignmentFlag::AlignCenter</set>
-          </property>
-          <property name="styleSheet">
-           <string>background-color: #03224c; color: white;</string>
+           <set>Qt::AlignCenter</set>
           </property>
          </widget>
         </item>
+        
         <item>
          <widget class="QPushButton" name="btnDashboard">
           <property name="text">
-           <string>🏠 Tableau de bord</string>
+           <string>📊 Tableau de bord</string>
+          </property>
+          <property name="checkable">
+           <bool>true</bool>
+          </property>
+          <property name="checked">
+           <bool>false</bool>
           </property>
          </widget>
         </item>
+        
         <item>
          <widget class="QPushButton" name="btnQuais">
           <property name="text">
            <string>⚓ Quais</string>
           </property>
+          <property name="checkable">
+           <bool>true</bool>
+          </property>
          </widget>
         </item>
+        
         <item>
          <widget class="QPushButton" name="btnShips">
           <property name="text">
            <string>🚢 Navires</string>
           </property>
+          <property name="checkable">
+           <bool>true</bool>
+          </property>
          </widget>
         </item>
+        
         <item>
          <widget class="QPushButton" name="btnCaptures">
           <property name="text">
            <string>🐟 Captures</string>
           </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="btnEmployees">
-          <property name="text">
-           <string>👤 Employés</string>
+          <property name="checkable">
+           <bool>true</bool>
           </property>
          </widget>
         </item>
+        
+        <item>
+         <widget class="QPushButton" name="btnEmployees">
+          <property name="text">
+           <string>👥 Employés</string>
+          </property>
+          <property name="checkable">
+           <bool>true</bool>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        
         <item>
          <widget class="QPushButton" name="btnSettings">
           <property name="text">
            <string>⚙ Paramètres</string>
           </property>
+          <property name="checkable">
+           <bool>true</bool>
+          </property>
          </widget>
         </item>
+        
         <item>
-         <widget class="QWidget" name="sidebarSpacerWidget">
-          <property name="styleSheet">
-           <string>background-color: #03224c;</string>
+         <spacer>
+          <property name="orientation">
+           <enum>Qt::Vertical</enum>
           </property>
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>0</width>
+            <height>0</height>
+           </size>
           </property>
-         </widget>
+         </spacer>
         </item>
+        
         <item>
          <widget class="QPushButton" name="btnLogout">
           <property name="text">
-           <string>⏻ Déconnexion</string>
+           <string>🚪 Déconnexion</string>
           </property>
          </widget>
         </item>
        </layout>
       </widget>
      </item>
-     <!-- CONTENT AREA -->
+     
+     <!-- CONTENU PRINCIPAL -->
      <item>
-      <layout class="QVBoxLayout" name="contentLayout">
-       <item>
-        <layout class="QHBoxLayout" name="headerLayout">
-         <item>
-          <widget class="QLabel" name="labelTitle">
-           <property name="text">
-            <string>Gestion des Employés</string>
-           </property>
-           <property name="styleSheet">
-            <string>font-size: 28px; font-weight: bold; color: #03224c;</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <spacer name="headerSpacer">
-           <property name="orientation">
-            <enum>Qt::Orientation::Horizontal</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>0</width>
-             <height>0</height>
-            </size>
-           </property>
-          </spacer>
-         </item>
-         <item>
-          <widget class="QLineEdit" name="lineSearch">
-           <property name="placeholderText">
-            <string>Rechercher un employé...</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QPushButton" name="btnSortByPosition">
-           <property name="text">
-            <string>📋 Tri Poste</string>
-           </property>
-           <property name="maximumWidth">
-            <number>120</number>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QPushButton" name="btnSortBySalary">
-           <property name="text">
-            <string>💰 Tri Salaire</string>
-           </property>
-           <property name="maximumWidth">
-            <number>120</number>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QPushButton" name="btnAnalytics">
-           <property name="text">
-            <string>📊 Statistiques</string>
-           </property>
-           <property name="maximumWidth">
-            <number>120</number>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QPushButton" name="btnAdd">
-           <property name="text">
-            <string>+ Ajouter</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </item>
-       <item>
-        <widget class="QGroupBox" name="statsBox">
-         <property name="title">
-          <string>📊 Statistiques par Métier</string>
-         </property>
-         <layout class="QHBoxLayout" name="statsLayout">
-          <property name="spacing">
-           <number>10</number>
-          </property>
+      <widget class="QWidget" name="contentArea" native="true">
+       <property name="minimumSize">
+        <size>
+         <width>650</width>
+         <height>0</height>
+        </size>
+       </property>
+       <layout class="QVBoxLayout" name="contentLayout">
+        <property name="spacing">
+         <number>15</number>
+        </property>
+        <property name="leftMargin">
+         <number>25</number>
+        </property>
+        <property name="topMargin">
+         <number>25</number>
+        </property>
+        <property name="rightMargin">
+         <number>25</number>
+        </property>
+        <property name="bottomMargin">
+         <number>25</number>
+        </property>
+        
+        <!-- EN-TÊTE -->
+        <item>
+         <layout class="QHBoxLayout" name="headerLayout">
           <item>
-           <widget class="QLabel" name="statPecheur">
+           <widget class="QLabel" name="pageTitle">
             <property name="text">
-             <string>🎣 Pêcheur: 0</string>
-            </property>
-            <property name="alignment">
-             <set>Qt::AlignCenter</set>
-            </property>
-            <property name="styleSheet">
-             <string>background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #dbeafe, stop:1 #bfdbfe); color: #03224c; font-weight: bold; border-radius: 8px; padding: 12px; border: 1px solid #93c5fd;</string>
+             <string>Gestion des Employés</string>
             </property>
            </widget>
           </item>
           <item>
-           <widget class="QLabel" name="statMatelot">
-            <property name="text">
-             <string>⛵ Matelot: 0</string>
+           <spacer>
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
             </property>
-            <property name="alignment">
-             <set>Qt::AlignCenter</set>
+           </spacer>
+          </item>
+          <item>
+           <widget class="QLineEdit" name="lineSearch">
+            <property name="placeholderText">
+             <string>🔍 Rechercher un employé...</string>
             </property>
-            <property name="styleSheet">
-             <string>background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #d1fae5, stop:1 #a7f3d0); color: #065f46; font-weight: bold; border-radius: 8px; padding: 12px; border: 1px solid #6ee7b7;</string>
+            <property name="minimumSize">
+             <size>
+              <width>250</width>
+              <height>0</height>
+             </size>
             </property>
            </widget>
           </item>
           <item>
-           <widget class="QLabel" name="statDocker">
+           <widget class="QPushButton" name="btnAdd">
             <property name="text">
-             <string>📦 Docker: 0</string>
+             <string>➕ Nouvel employé</string>
             </property>
-            <property name="alignment">
-             <set>Qt::AlignCenter</set>
-            </property>
-            <property name="styleSheet">
-             <string>background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #fed7aa, stop:1 #fdba74); color: #92400e; font-weight: bold; border-radius: 8px; padding: 12px; border: 1px solid #fb923c;</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QLabel" name="statChefQuai">
-            <property name="text">
-             <string>👔 Chef de quai: 0</string>
-            </property>
-            <property name="alignment">
-             <set>Qt::AlignCenter</set>
-            </property>
-            <property name="styleSheet">
-             <string>background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #e9d5ff, stop:1 #d8b4fe); color: #6b21a8; font-weight: bold; border-radius: 8px; padding: 12px; border: 1px solid #d946ef;</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QLabel" name="statSuperviseur">
-            <property name="text">
-             <string>📋 Superviseur: 0</string>
-            </property>
-            <property name="alignment">
-             <set>Qt::AlignCenter</set>
-            </property>
-            <property name="styleSheet">
-             <string>background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #fecaca, stop:1 #fca5a5); color: #7c2d12; font-weight: bold; border-radius: 8px; padding: 12px; border: 1px solid #f87171;</string>
+            <property name="minimumSize">
+             <size>
+              <width>140</width>
+              <height>0</height>
+             </size>
             </property>
            </widget>
           </item>
          </layout>
-        </widget>
-       </item>
-       <item>
-        <widget class="QGroupBox" name="salaryStatsBox">
-         <property name="title">
-          <string>💰 Statistiques Salariales</string>
-         </property>
-         <layout class="QHBoxLayout" name="salaryStatsLayout">
-          <property name="spacing">
-           <number>10</number>
-          </property>
+        </item>
+        
+        <!-- STATISTIQUES RAPIDES -->
+        <item>
+         <layout class="QHBoxLayout" name="quickStatsLayout">
           <item>
-           <widget class="QLabel" name="salaryAverage">
+           <widget class="QLabel" name="statTotal">
             <property name="text">
-             <string>📊 Salaire Moyen: 0 TND</string>
+             <string>📊 Total employés: 24</string>
             </property>
             <property name="alignment">
              <set>Qt::AlignCenter</set>
             </property>
-            <property name="styleSheet">
-             <string>background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #dbeafe, stop:1 #bfdbfe); color: #03224c; font-weight: bold; border-radius: 8px; padding: 12px; border: 1px solid #93c5fd;</string>
+            <property name="objectName">
+             <string>statCard</string>
+            </property>
+            <property name="type" stdset="0">
+             <string>stat-blue</string>
             </property>
            </widget>
           </item>
           <item>
-           <widget class="QLabel" name="salaryHighest">
+           <widget class="QLabel" name="statPresent">
             <property name="text">
-             <string>📈 Salaire Max: 0 TND</string>
+             <string>✅ Présents: 18</string>
             </property>
             <property name="alignment">
              <set>Qt::AlignCenter</set>
             </property>
-            <property name="styleSheet">
-             <string>background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #d1fae5, stop:1 #a7f3d0); color: #065f46; font-weight: bold; border-radius: 8px; padding: 12px; border: 1px solid #6ee7b7;</string>
+            <property name="objectName">
+             <string>statCard</string>
+            </property>
+            <property name="type" stdset="0">
+             <string>stat-green</string>
             </property>
            </widget>
           </item>
           <item>
-           <widget class="QLabel" name="salaryLowest">
+           <widget class="QLabel" name="statAbsent">
             <property name="text">
-             <string>📉 Salaire Min: 0 TND</string>
+             <string>❌ Absents: 6</string>
             </property>
             <property name="alignment">
              <set>Qt::AlignCenter</set>
             </property>
-            <property name="styleSheet">
-             <string>background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #fed7aa, stop:1 #fdba74); color: #92400e; font-weight: bold; border-radius: 8px; padding: 12px; border: 1px solid #fb923c;</string>
+            <property name="objectName">
+             <string>statCard</string>
+            </property>
+            <property name="type" stdset="0">
+             <string>stat-orange</string>
             </property>
            </widget>
           </item>
-          <item>
-           <widget class="QLabel" name="salaryTotal">
-            <property name="text">
-             <string>💵 Total Mensuel: 0 TND</string>
-            </property>
-            <property name="alignment">
-             <set>Qt::AlignCenter</set>
-            </property>
-            <property name="styleSheet">
-             <string>background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #e9d5ff, stop:1 #d8b4fe); color: #6b21a8; font-weight: bold; border-radius: 8px; padding: 12px; border: 1px solid #d946ef;</string>
-            </property>
-           </widget>
-          </item>
-        </layout>
-       </widget>
-       </item>
-       <item>
-        <widget class="QTableWidget" name="tableEmployees">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="rowCount">
-          <number>0</number>
-         </property>
-         <property name="columnCount">
-          <number>8</number>
-         </property>
-         <column>
-          <property name="text">
-           <string>ID</string>
+         </layout>
+        </item>
+        
+        <!-- STATISTIQUES PAR POSTE -->
+        <item>
+         <widget class="QGroupBox" name="groupStats">
+          <property name="title">
+           <string>Répartition par poste</string>
           </property>
-          <property name="width">
-           <number>180</number>
+          <layout class="QHBoxLayout" name="statsLayout">
+           <item>
+            <widget class="QLabel" name="statPecheur">
+             <property name="text">
+              <string>🎣 Pêcheurs: 8</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+             <property name="objectName">
+              <string>statCard</string>
+             </property>
+             <property name="type" stdset="0">
+              <string>stat-orange</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QLabel" name="statMatelot">
+             <property name="text">
+              <string>⛵ Matelots: 5</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+             <property name="objectName">
+              <string>statCard</string>
+             </property>
+             <property name="type" stdset="0">
+              <string>stat-green</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QLabel" name="statDocker">
+             <property name="text">
+              <string>📦 Dockers: 4</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+             <property name="objectName">
+              <string>statCard</string>
+             </property>
+             <property name="type" stdset="0">
+              <string>stat-purple</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QLabel" name="statChefQuai">
+             <property name="text">
+              <string>👔 Chefs de quai: 4</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+             <property name="objectName">
+              <string>statCard</string>
+             </property>
+             <property name="type" stdset="0">
+              <string>stat-blue</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QLabel" name="statSuperviseur">
+             <property name="text">
+              <string>📋 Superviseurs: 3</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+             <property name="objectName">
+              <string>statCard</string>
+             </property>
+             <property name="type" stdset="0">
+              <string>stat-blue</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        
+        <!-- STATISTIQUES SALARIALES -->
+        <item>
+         <widget class="QGroupBox" name="groupSalary">
+          <property name="title">
+           <string>Statistiques salariales</string>
           </property>
-         </column>
-         <column>
-          <property name="text">
-           <string>Nom</string>
+          <layout class="QHBoxLayout" name="salaryLayout">
+           <item>
+            <widget class="QLabel" name="salaryAvg">
+             <property name="text">
+              <string>📊 Salaire moyen: 2,450 TND</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+             <property name="objectName">
+              <string>statCard</string>
+             </property>
+             <property name="type" stdset="0">
+              <string>stat-blue</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QLabel" name="salaryMax">
+             <property name="text">
+              <string>📈 Salaire max: 4,200 TND</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+             <property name="objectName">
+              <string>statCard</string>
+             </property>
+             <property name="type" stdset="0">
+              <string>stat-green</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QLabel" name="salaryMin">
+             <property name="text">
+              <string>📉 Salaire min: 1,350 TND</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+             <property name="objectName">
+              <string>statCard</string>
+             </property>
+             <property name="type" stdset="0">
+              <string>stat-orange</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        
+        <!-- TABLEAU DES EMPLOYÉS -->
+        <item>
+         <widget class="QTableWidget" name="tableEmployees">
+          <property name="alternatingRowColors">
+           <bool>true</bool>
           </property>
-          <property name="width">
-           <number>180</number>
+          <property name="selectionBehavior">
+           <enum>QAbstractItemView::SelectRows</enum>
           </property>
-         </column>
-         <column>
-          <property name="text">
-           <string>Poste</string>
+          <property name="sortingEnabled">
+           <bool>true</bool>
           </property>
-          <property name="width">
-           <number>180</number>
+          <property name="columnCount">
+           <number>7</number>
           </property>
-         </column>
-         <column>
-          <property name="text">
-           <string>Email</string>
-          </property>
-          <property name="width">
-           <number>180</number>
-          </property>
-         </column>
-         <column>
-          <property name="text">
-           <string>Téléphone</string>
-          </property>
-          <property name="width">
-           <number>180</number>
-          </property>
-         </column>
-         <column>
-          <property name="text">
-           <string>Salaire</string>
-          </property>
-          <property name="width">
-           <number>150</number>
-          </property>
-         </column>
-         <column>
-          <property name="text">
-           <string>Edit</string>
-          </property>
-          <property name="width">
-           <number>60</number>
-          </property>
-         </column>
-         <column>
-          <property name="text">
-           <string>Delete</string>
-          </property>
-          <property name="width">
-           <number>60</number>
-          </property>
-         </column>
-        </widget>
-       </item>
-      </layout>
+          <attribute name="horizontalHeaderStretchLastSection">
+           <bool>true</bool>
+          </attribute>
+          <column>
+           <property name="text">
+            <string>ID</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>Nom complet</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>Poste</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>Email</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>Téléphone</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>Salaire (TND)</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>Actions</string>
+           </property>
+          </column>
+         </widget>
+        </item>
+       </layout>
+      </widget>
      </item>
     </layout>
    </widget>

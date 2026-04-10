@@ -150,7 +150,7 @@ GestionQuai::GestionQuai(QWidget *parent)
       pageSimulation(nullptr)
 {
     setupUI();
-    Connection::instance()->createconnect();
+    Connection::instance()->createConnect();
     loadData();
 }
 
@@ -170,7 +170,7 @@ void GestionQuai::setupUI()
     // Header - Titre
     QHBoxLayout *headerLayout = new QHBoxLayout();
     QLabel *title = new QLabel("Gestion des Quais", this);
-    title->setStyleSheet("font-size: 28px; font-weight: bold; color: #03224c;");
+    title->setObjectName("titleLabel");
     headerLayout->addWidget(title);
     headerLayout->addStretch();
     mainLayout->addLayout(headerLayout);
@@ -178,7 +178,7 @@ void GestionQuai::setupUI()
     // Search bar
     QHBoxLayout *searchLayout = new QHBoxLayout();
     QLabel *searchLabel = new QLabel("Rechercher:", this);
-    searchLabel->setStyleSheet("font-weight: bold; color: #03224c;");
+    searchLabel->setObjectName("searchLabel");
     lineSearch = new QLineEdit(this);
     lineSearch->setPlaceholderText("Rechercher par nom, adresse...");
     lineSearch->setMinimumWidth(250);
@@ -197,11 +197,17 @@ void GestionQuai::setupUI()
     statMoyenneOccupation = new QLabel("Moyenne: 0%", statsBox);
     statDispos = new QLabel("Disponibles: 0", statsBox);
     
-    statTotal->setStyleSheet("background: #e3f2fd; color: #03224c; font-weight: bold; border-radius: 8px; padding: 10px;");
-    statTotalPlaces->setStyleSheet("background: #e8f5e9; color: #065f46; font-weight: bold; border-radius: 8px; padding: 10px;");
-    statTotalNavires->setStyleSheet("background: #fff3e0; color: #e65100; font-weight: bold; border-radius: 8px; padding: 10px;");
-    statMoyenneOccupation->setStyleSheet("background: #fce4ec; color: #880e4f; font-weight: bold; border-radius: 8px; padding: 10px;");
-    statDispos->setStyleSheet("background: #f3e5f5; color: #4a148c; font-weight: bold; border-radius: 8px; padding: 10px;");
+    statTotal->setProperty("type", "stat-blue");
+    statTotalPlaces->setProperty("type", "stat-green");
+    statTotalNavires->setProperty("type", "stat-orange");
+    statMoyenneOccupation->setProperty("type", "stat-purple");
+    statDispos->setProperty("type", "stat-blue");
+    
+    for (auto lbl : {statTotal, statTotalPlaces, statTotalNavires, statMoyenneOccupation, statDispos}) {
+        lbl->setObjectName("statCard");
+        lbl->style()->unpolish(lbl);
+        lbl->style()->polish(lbl);
+    }
     
     statsLayout->addWidget(statTotal);
     statsLayout->addWidget(statTotalPlaces);
@@ -213,35 +219,58 @@ void GestionQuai::setupUI()
     // Page principale: Tableau des quais
     pageConsulter = new QWidget();
     QVBoxLayout *consulterLayout = new QVBoxLayout(pageConsulter);
+    consulterLayout->setContentsMargins(10, 20, 10, 20);
     
     table = new QTableWidget(pageConsulter);
+    table->setObjectName("tableQuais");
     table->setColumnCount(7);
     table->setHorizontalHeaderLabels({"ID", "Nom", "Places", "Navires", "Adresse", "Travaux", "État"});
     table->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
     table->verticalHeader()->setVisible(false);
+    table->verticalHeader()->setDefaultSectionSize(60);
     table->setSelectionBehavior(QAbstractItemView::SelectRows);
     table->setEditTriggers(QAbstractItemView::NoEditTriggers);
     consulterLayout->addWidget(table, 1);
 
     // Buttons for consulter page - Like employee management
     QHBoxLayout *buttonsLayout = new QHBoxLayout();
-    QPushButton *btnAdd = new QPushButton("+ Ajouter", this);
-    QPushButton *btnEdit = new QPushButton("✏️ Modifier", this);
-    QPushButton *btnDelete = new QPushButton("🗑️ Supprimer", this);
-    QPushButton *btnSortNom = new QPushButton("Trier par Nom", this);
-    QPushButton *btnSortPlaces = new QPushButton("Trier par Places", this);
-    QPushButton *btnSortNavires = new QPushButton("Trier par Navires", this);
-    QPushButton *btnProposition = new QPushButton("💡 Proposition", this);
-    QPushButton *btnSimulation = new QPushButton("🎮 Simulation", this);
+    buttonsLayout->setSpacing(10);
     
-    btnAdd->setStyleSheet("QPushButton { background-color: #4CAF50; color: white; padding: 8px 16px; border-radius: 5px; font-weight: bold; }");
-    btnEdit->setStyleSheet("QPushButton { background-color: #2196F3; color: white; padding: 8px 16px; border-radius: 5px; font-weight: bold; }");
-    btnDelete->setStyleSheet("QPushButton { background-color: #F44336; color: white; padding: 8px 16px; border-radius: 5px; font-weight: bold; }");
-    btnSortNom->setStyleSheet("QPushButton { background-color: #9C27B0; color: white; padding: 8px 12px; border-radius: 5px; }");
-    btnSortPlaces->setStyleSheet("QPushButton { background-color: #FF9800; color: white; padding: 8px 12px; border-radius: 5px; }");
-    btnSortNavires->setStyleSheet("QPushButton { background-color: #00BCD4; color: white; padding: 8px 12px; border-radius: 5px; }");
-    btnProposition->setStyleSheet("QPushButton { background-color: #795548; color: white; padding: 8px 12px; border-radius: 5px; }");
-    btnSimulation->setStyleSheet("QPushButton { background-color: #607D8B; color: white; padding: 8px 12px; border-radius: 5px; }");
+    QPushButton *btnAdd = new QPushButton("➕ Ajouter", this);
+    btnAdd->setObjectName("btnAdd");
+    
+    QPushButton *btnEdit = new QPushButton("✏️ Modifier", this);
+    btnEdit->setObjectName("btnEdit");
+    
+    QPushButton *btnDelete = new QPushButton("🗑️ Supprimer", this);
+    btnDelete->setObjectName("btnDelete");
+    
+    QPushButton *btnSortNom = new QPushButton("Trier par Nom", this);
+    btnSortNom->setObjectName("btnSecondary");
+    
+    QPushButton *btnSortPlaces = new QPushButton("Trier par Places", this);
+    btnSortPlaces->setObjectName("btnSecondary");
+    
+    QPushButton *btnSortNavires = new QPushButton("Trier par Navires", this);
+    btnSortNavires->setObjectName("btnSecondary");
+    
+    QPushButton *btnProposition = new QPushButton("💡 Proposition", this);
+    btnProposition->setObjectName("btnSecondary");
+    
+    QPushButton *btnSimulation = new QPushButton("🎮 Simulation", this);
+    btnSimulation->setObjectName("btnSecondary");
+    
+    buttonsLayout->addWidget(btnAdd);
+    buttonsLayout->addWidget(btnEdit);
+    buttonsLayout->addWidget(btnDelete);
+    buttonsLayout->addStretch();
+    buttonsLayout->addWidget(btnSortNom);
+    buttonsLayout->addWidget(btnSortPlaces);
+    buttonsLayout->addWidget(btnSortNavires);
+    buttonsLayout->addStretch();
+    buttonsLayout->addWidget(btnProposition);
+    buttonsLayout->addWidget(btnSimulation);
+    consulterLayout->addLayout(buttonsLayout);
     
     buttonsLayout->addWidget(btnAdd);
     buttonsLayout->addWidget(btnEdit);

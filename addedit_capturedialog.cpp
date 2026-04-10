@@ -12,187 +12,102 @@
 #include <QLineEdit>
 #include <QCalendarWidget>
 #include <QListView>
+#include "connection.h"
+#include <QSqlQuery>
+#include <QSqlDatabase>
+#include <QSqlError>
 
-// Compatibility: provide the old 2-arg constructor that forwards to the new 3-arg one.
+// Compatibility: provide the old 2-arg constructor that forwards to the new 4-arg one.
 AddEditCaptureDialog::AddEditCaptureDialog(QWidget *parent, bool isEdit)
-    : AddEditCaptureDialog(parent, isEdit, false)
+    : AddEditCaptureDialog(parent, isEdit, -1, false)
 {
 }
 
 AddEditCaptureDialog::AddEditCaptureDialog(QWidget *parent, bool isEdit, bool allowExport)
-    : QDialog(parent), lineNavire(nullptr), dateEdit(nullptr), comboType(nullptr), spinQuantite(nullptr), isEditMode(isEdit), m_allowExport(allowExport)
+    : AddEditCaptureDialog(parent, isEdit, -1, allowExport)
+{
+}
+
+AddEditCaptureDialog::AddEditCaptureDialog(QWidget *parent, bool isEdit, int captureId, bool allowExport)
+    : QDialog(parent), lineNavire(nullptr), dateEdit(nullptr), comboType(nullptr), spinQuantite(nullptr), isEditMode(isEdit), m_allowExport(allowExport), m_captureId(captureId)
 {
     setWindowTitle(isEdit ? "Modifier la capture" : "Nouvelle capture");
         setModal(true);
         setMinimumSize(560, 420); // medium size
 
-        // Centralized, polished field styling used across capture form widgets
-        const QString commonFieldStyle = R"STYLE(
-QLineEdit, QComboBox, QDateEdit, QSpinBox {
-    background: #ffffff;
-    color: #07324a;
-    border: 1px solid #d6e0ea;
-    padding: 10px;
-    border-radius: 10px;
-}
-QLineEdit:focus, QComboBox:focus, QDateEdit:focus, QSpinBox:focus {
-    border: 1px solid #1e88e5;
-}
-QComboBox::drop-down { subcontrol-origin: padding; subcontrol-position: top right; width: 30px; }
-QListView { background: #ffffff; color: #07324a; selection-background-color: #cfe8ff; selection-color: #07324a; }
-QListView::item { padding: 6px 10px; }
-QSpinBox::up-button, QSpinBox::down-button { width: 18px; }
-)STYLE";
-
-        setStyleSheet(QString("QDialog { background: #ffffff; }") + commonFieldStyle);
-
     QVBoxLayout *mainLayout = new QVBoxLayout(this);
+    mainLayout->setContentsMargins(24, 24, 24, 24);
+    mainLayout->setSpacing(20);
 
-    QLabel *titleLabel = new QLabel(isEdit ? "<b>Modifier la capture</b>" : "<b>Nouvelle capture</b>");
-    titleLabel->setStyleSheet("font-size: 16px; color: #03224c; margin-bottom:10px;");
-    titleLabel->setAlignment(Qt::AlignCenter);
+    QLabel *titleLabel = new QLabel(isEdit ? "Modifier la capture" : "Nouvelle capture");
+    titleLabel->setObjectName("titleLabel");
+    titleLabel->setAlignment(Qt::AlignLeft);
     mainLayout->addWidget(titleLabel);
 
-    // Container with soft background and padding
-    QWidget *container = new QWidget(this);
-    container->setStyleSheet("background: #f7f9fc; border-radius: 10px; padding: 16px;");
-    QVBoxLayout *containerLayout = new QVBoxLayout(container);
-    containerLayout->setContentsMargins(8, 8, 8, 8);
-    containerLayout->setSpacing(12);
-
+    // Form layout for better alignment
     QFormLayout *formLayout = new QFormLayout();
-    formLayout->setLabelAlignment(Qt::AlignRight);
-    formLayout->setFormAlignment(Qt::AlignLeft | Qt::AlignVCenter);
-    formLayout->setHorizontalSpacing(18);
-    formLayout->setVerticalSpacing(10);
+    formLayout->setLabelAlignment(Qt::AlignLeft);
+    formLayout->setSpacing(15);
+    formLayout->setFieldGrowthPolicy(QFormLayout::AllNonFixedFieldsGrow);
 
     lineNavire = new QLineEdit(this);
     lineNavire->setPlaceholderText("Ex: Le Neptune");
-    lineNavire->setMinimumWidth(320);
-    lineNavire->setToolTip("Nom du navire qui a effectué la capture");
-    // Uses centralized stylesheet from the dialog for consistent appearance
-    QPalette pLine = lineNavire->palette();
-    pLine.setColor(QPalette::Text, QColor("#07324a"));
-    pLine.setColor(QPalette::PlaceholderText, QColor("#9aa6b2"));
-    lineNavire->setPalette(pLine);
-    formLayout->addRow("Navire:", lineNavire);
+    formLayout->addRow("Nom du Navire", lineNavire);
 
     dateEdit = new QDateEdit(this);
     dateEdit->setCalendarPopup(true);
     dateEdit->setDate(QDate::currentDate());
-    dateEdit->setDisplayFormat("dd/MM/yyyy");
-    dateEdit->setToolTip("Date de la capture");
-    // Widget uses centralized styling; keep calendar popup customizations below
-    QPalette pDate = dateEdit->palette();
-    pDate.setColor(QPalette::Text, QColor("#07324a"));
-    dateEdit->setPalette(pDate);
-    // Ensure internal line edit (used to show the date) has visible text colors
-    if (QLineEdit *dline = dateEdit->findChild<QLineEdit*>()) {
-        dline->setStyleSheet("QLineEdit { background: transparent; color: #07324a; }");
-        QPalette pd = dline->palette();
-        pd.setColor(QPalette::Text, QColor("#07324a"));
-        pd.setColor(QPalette::PlaceholderText, QColor("#9aa6b2"));
-        dline->setPalette(pd);
-    }
-    // Strong calendar styling for the popup
-    QCalendarWidget *cal = new QCalendarWidget(this);
-    cal->setFirstDayOfWeek(Qt::Monday);
-    cal->setStyleSheet(R"(
-QCalendarWidget { background: #ffffff; color: #07324a; border: 1px solid #d6e0ea; }
-QCalendarWidget QToolButton { color: #07324a; background: transparent; }
-QCalendarWidget QAbstractItemView { selection-background-color: #cfe8ff; selection-color: #07324a; background: #ffffff; color: #07324a; }
-QCalendarWidget QWidget { color: #07324a; }
-)" );
-    cal->setVerticalHeaderFormat(QCalendarWidget::NoVerticalHeader);
-    dateEdit->setCalendarWidget(cal);
-    formLayout->addRow("Date:", dateEdit);
+    dateEdit->setDisplayFormat("dd MMMM yyyy");
+    formLayout->addRow("Date de Capture", dateEdit);
 
     comboType = new QComboBox(this);
     comboType->addItems({"Thon", "Sardine", "Maquereau", "Espadon", "Crevette", "Dorade", "Saumon", "Bar"});
     comboType->setEditable(true);
-    comboType->setInsertPolicy(QComboBox::NoInsert);
-    comboType->setToolTip("Type de poisson (sélectionner ou saisir)");
-    // Appearance is handled by the dialog's centralized stylesheet
-    if (comboType->isEditable() && comboType->lineEdit()) {
-        comboType->lineEdit()->setStyleSheet("QLineEdit { background: transparent; color: #07324a; }");
-        QPalette pCombo = comboType->lineEdit()->palette();
-        pCombo.setColor(QPalette::Text, QColor("#07324a"));
-        pCombo.setColor(QPalette::PlaceholderText, QColor("#9aa6b2"));
-        comboType->lineEdit()->setPalette(pCombo);
-    }
-    // Ensure dropdown list items are visible
-    if (comboType->view()) {
-        QListView *lv = qobject_cast<QListView*>(comboType->view());
-        if (lv) {
-            lv->setStyleSheet(R"(
-QListView { background: #ffffff; color: #07324a; selection-background-color: #cfe8ff; selection-color: #07324a; }
-QListView::item { padding: 6px 10px; }
-)");
-            QPalette pv = lv->palette();
-            pv.setColor(QPalette::Text, QColor("#07324a"));
-            pv.setColor(QPalette::Base, QColor("#ffffff"));
-            pv.setColor(QPalette::Highlight, QColor("#cfe8ff"));
-            pv.setColor(QPalette::HighlightedText, QColor("#07324a"));
-            lv->setPalette(pv);
-        } else {
-            comboType->view()->setStyleSheet("QListView { background: #ffffff; color: #07324a; selection-background-color: #cfe8ff; selection-color: #07324a; }");
-        }
-    }
-    formLayout->addRow("Type:", comboType);
+    formLayout->addRow("Type de Poisson", comboType);
 
     spinQuantite = new QSpinBox(this);
     spinQuantite->setRange(1, 1000000);
     spinQuantite->setSuffix(" kg");
-    spinQuantite->setToolTip("Quantité en kilogrammes");
-    spinQuantite->setAlignment(Qt::AlignCenter);
-    // Uses centralized styling from the dialog for consistent appearance
-    QPalette pSpin = spinQuantite->palette();
-    pSpin.setColor(QPalette::Text, QColor("#07324a"));
-    spinQuantite->setPalette(pSpin);
-    // Ensure spinbox internal lineedit shows text and suffix clearly
-    #if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
-    if (QLineEdit *sline = spinQuantite->findChild<QLineEdit*>()) {
-        sline->setStyleSheet("QLineEdit { background: transparent; color: #07324a; }");
-        QPalette ps = sline->palette();
-        ps.setColor(QPalette::Text, QColor("#07324a"));
-        sline->setPalette(ps);
-    }
-    #endif
-    // Up/down button width and arrow colors are set through the dialog stylesheet
-    formLayout->addRow("Quantité:", spinQuantite);
+    spinQuantite->setAlignment(Qt::AlignLeft);
+    formLayout->addRow("Quantité", spinQuantite);
 
-    containerLayout->addLayout(formLayout);
-    mainLayout->addWidget(container);
+    mainLayout->addLayout(formLayout);
 
-    // Buttons area with optional Export PDF
+    // Spacer
+    mainLayout->addStretch();
+
+    // Buttons area
     QHBoxLayout *bottomLayout = new QHBoxLayout();
-    bottomLayout->setContentsMargins(4, 8, 4, 4);
-    bottomLayout->addStretch();
+    bottomLayout->setSpacing(12);
 
     if (m_allowExport) {
-        QPushButton *exportBtn = new QPushButton("📄 Exporter PDF", this);
-        exportBtn->setStyleSheet("QPushButton{ background:#1e40af; color:white; padding:8px 12px; border-radius:6px; font-weight:600; }");
-        exportBtn->setMinimumWidth(120);
+        QPushButton *exportBtn = new QPushButton("📄 Rapport PDF", this);
+        exportBtn->setObjectName("btnSecondary");
+        exportBtn->setCursor(Qt::PointingHandCursor);
+        exportBtn->setMinimumHeight(40);
         connect(exportBtn, &QPushButton::clicked, this, &AddEditCaptureDialog::exportToPdf);
         bottomLayout->addWidget(exportBtn);
     }
+    
+    bottomLayout->addStretch();
 
-    QDialogButtonBox *buttonBox = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
-    buttonBox->button(QDialogButtonBox::Ok)->setText("Enregistrer");
-    buttonBox->button(QDialogButtonBox::Cancel)->setText("Annuler");
-    buttonBox->button(QDialogButtonBox::Ok)->setStyleSheet("QPushButton{ background:#4CAF50; color:white; padding:8px 12px; border-radius:6px; font-weight:600; }");
-    buttonBox->button(QDialogButtonBox::Cancel)->setStyleSheet("QPushButton{ background:#9E9E9E; color:white; padding:8px 12px; border-radius:6px; }");
-    connect(buttonBox, &QDialogButtonBox::accepted, this, &AddEditCaptureDialog::onAccepted);
-    connect(buttonBox, &QDialogButtonBox::rejected, this, &QDialog::reject);
-    bottomLayout->addWidget(buttonBox);
+    QPushButton *btnCancel = new QPushButton("Annuler", this);
+    btnCancel->setObjectName("btnCancel");
+    btnCancel->setCursor(Qt::PointingHandCursor);
+    btnCancel->setMinimumHeight(40);
+    connect(btnCancel, &QPushButton::clicked, this, &QDialog::reject);
+    bottomLayout->addWidget(btnCancel);
+
+    QPushButton *btnOk = new QPushButton(isEdit ? "Mettre à jour" : "Enregistrer", this);
+    btnOk->setObjectName("btnOk");
+    btnOk->setCursor(Qt::PointingHandCursor);
+    btnOk->setMinimumHeight(40);
+    connect(btnOk, &QPushButton::clicked, this, &AddEditCaptureDialog::onAccepted);
+    bottomLayout->addWidget(btnOk);
 
     mainLayout->addLayout(bottomLayout);
 
-    // UX fine-tuning
     lineNavire->setFocus();
-    setTabOrder(lineNavire, dateEdit);
-    setTabOrder(dateEdit, comboType);
-    setTabOrder(comboType, spinQuantite);
 }
 
 QString AddEditCaptureDialog::getNavire() const { return lineNavire ? lineNavire->text() : QString(); }
@@ -200,7 +115,7 @@ QDate AddEditCaptureDialog::getDateCapture() const { return dateEdit ? dateEdit-
 QString AddEditCaptureDialog::getTypePoisson() const { return comboType ? comboType->currentText() : QString(); }
 int AddEditCaptureDialog::getQuantite() const { return spinQuantite ? spinQuantite->value() : 0; }
 
-void AddEditCaptureDialog::setCaptureData(const QString &navire, const QDate &date, const QString &type, int quantite)
+void AddEditCaptureDialog::setCaptureData(const QString &navire, const QDate &date, const QString &type, int quantite, const QString &/*extra*/)
 {
     if (lineNavire) lineNavire->setText(navire);
     if (dateEdit) dateEdit->setDate(date);
@@ -218,6 +133,40 @@ void AddEditCaptureDialog::onAccepted()
         QMessageBox::warning(this, "Champ requis", "Veuillez saisir le type de poisson.");
         return;
     }
+    // Perform DB insert/update here
+    Connection::instance()->createConnect();
+    QSqlDatabase db = QSqlDatabase::database();
+    QSqlQuery q(db);
+
+    if (isEditMode && m_captureId >= 0) {
+        q.prepare("UPDATE captures SET Navire=?, Date_Capture=?, Type_Poisson=?, Quantite=? WHERE ID_Capture=?");
+        q.addBindValue(lineNavire->text().trimmed());
+        q.addBindValue(dateEdit->date().toString(Qt::ISODate));
+        q.addBindValue(comboType->currentText().trimmed());
+        q.addBindValue(spinQuantite->value());
+        q.addBindValue(m_captureId);
+        if (!q.exec()) {
+            QMessageBox::critical(this, "Erreur", "Impossible de modifier la capture: " + q.lastError().text());
+            return;
+        }
+        QMessageBox::information(this, "Succès", "Capture modifiée avec succès");
+        accept();
+        return;
+    }
+
+    // Insert new capture
+    q.prepare("INSERT INTO captures (Navire, Date_Capture, Type_Poisson, Quantite) VALUES (?, ?, ?, ?)");
+    q.addBindValue(lineNavire->text().trimmed());
+    q.addBindValue(dateEdit->date().toString(Qt::ISODate));
+    q.addBindValue(comboType->currentText().trimmed());
+    q.addBindValue(spinQuantite->value());
+
+    if (!q.exec()) {
+        QMessageBox::critical(this, "Erreur", "Impossible d'ajouter la capture: " + q.lastError().text());
+        return;
+    }
+
+    QMessageBox::information(this, "Succès", "Capture ajoutée avec succès");
     accept();
 }
 

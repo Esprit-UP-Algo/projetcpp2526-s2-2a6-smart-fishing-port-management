@@ -10,51 +10,70 @@ AddEditEmployeeDialog::AddEditEmployeeDialog(QWidget *parent, bool isEdit)
     : QDialog(parent), lineId(nullptr), lineNom(nullptr), comboPoste(nullptr),
       lineEmail(nullptr), lineTelephone(nullptr), lineSalaire(nullptr), isEditMode(isEdit)
 {
-    this->setWindowTitle(isEdit ? "Edit Employee" : "Add New Employee");
+    this->setWindowTitle(isEdit ? "Modifier l'employé" : "Nouvel employé");
     this->setModal(true);
-    this->setMinimumWidth(400);
+    this->setMinimumSize(500, 600);
 
     QVBoxLayout *mainLayout = new QVBoxLayout(this);
+    mainLayout->setContentsMargins(32, 32, 32, 32);
+    mainLayout->setSpacing(24);
 
-    QLabel *titleLabel = new QLabel(isEdit ? "<b>Edit Employee Information</b>" : "<b>Add New Employee</b>");
-    titleLabel->setStyleSheet("font-size: 14px; color: #03224c;");
+    QLabel *titleLabel = new QLabel(isEdit ? "Informations de l'employé" : "Ajouter un nouvel employé");
+    titleLabel->setObjectName("titleLabel");
     mainLayout->addWidget(titleLabel);
 
     QFormLayout *formLayout = new QFormLayout();
+    formLayout->setLabelAlignment(Qt::AlignLeft);
+    formLayout->setSpacing(15);
+    formLayout->setFieldGrowthPolicy(QFormLayout::AllNonFixedFieldsGrow);
 
     lineId = new QLineEdit(this);
     lineId->setReadOnly(isEdit);
-    formLayout->addRow("Employee ID:", lineId);
+    lineId->setPlaceholderText("ID unique...");
+    formLayout->addRow("ID Employé", lineId);
 
     lineNom = new QLineEdit(this);
-    formLayout->addRow("Full Name:", lineNom);
+    lineNom->setPlaceholderText("Nom et Prénom");
+    formLayout->addRow("Nom complet", lineNom);
 
     comboPoste = new QComboBox(this);
     comboPoste->addItems({"Pêcheur", "Matelot", "Docker", "Chef de quai", "Superviseur"});
-    formLayout->addRow("Position:", comboPoste);
+    formLayout->addRow("Poste / Fonction", comboPoste);
 
     lineEmail = new QLineEdit(this);
-    lineEmail->setPlaceholderText("name@example.com");
-    formLayout->addRow("Email:", lineEmail);
+    lineEmail->setPlaceholderText("exemple@port.com");
+    formLayout->addRow("Adresse Email", lineEmail);
 
     lineTelephone = new QLineEdit(this);
-    lineTelephone->setPlaceholderText("Phone number");
-    formLayout->addRow("Phone:", lineTelephone);
+    lineTelephone->setPlaceholderText("+216 -- --- ---");
+    formLayout->addRow("Téléphone", lineTelephone);
 
     lineSalaire = new QLineEdit(this);
-    lineSalaire->setPlaceholderText("0");
-    formLayout->addRow("Salary (TND):", lineSalaire);
+    lineSalaire->setPlaceholderText("0.00");
+    formLayout->addRow("Salaire (TND)", lineSalaire);
 
     mainLayout->addLayout(formLayout);
+    mainLayout->addStretch();
 
-    QDialogButtonBox *buttonBox = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
-    buttonBox->button(QDialogButtonBox::Ok)->setText("Save");
-    buttonBox->button(QDialogButtonBox::Cancel)->setText("Cancel");
-    
-    connect(buttonBox, &QDialogButtonBox::accepted, this, &AddEditEmployeeDialog::onAccepted);
-    connect(buttonBox, &QDialogButtonBox::rejected, this, &QDialog::reject);
+    QHBoxLayout *buttonLayout = new QHBoxLayout();
+    buttonLayout->setSpacing(12);
+    buttonLayout->addStretch();
 
-    mainLayout->addWidget(buttonBox);
+    QPushButton *btnCancel = new QPushButton("Annuler", this);
+    btnCancel->setObjectName("btnCancel");
+    btnCancel->setCursor(Qt::PointingHandCursor);
+    btnCancel->setMinimumHeight(45);
+    connect(btnCancel, &QPushButton::clicked, this, &QDialog::reject);
+    buttonLayout->addWidget(btnCancel);
+
+    QPushButton *btnOk = new QPushButton(isEdit ? "Mettre à jour" : "Enregistrer", this);
+    btnOk->setObjectName("btnOk");
+    btnOk->setCursor(Qt::PointingHandCursor);
+    btnOk->setMinimumHeight(45);
+    connect(btnOk, &QPushButton::clicked, this, &AddEditEmployeeDialog::onAccepted);
+    buttonLayout->addWidget(btnOk);
+
+    mainLayout->addLayout(buttonLayout);
 }
 
 AddEditEmployeeDialog::~AddEditEmployeeDialog()

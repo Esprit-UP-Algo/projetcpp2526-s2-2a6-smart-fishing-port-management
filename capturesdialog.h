@@ -6,6 +6,8 @@
 #include <QLineEdit>
 #include <QPushButton>
 #include <QLabel>
+#include <QComboBox>
+#include <QDateEdit>
 
 class CapturesDialog : public QWidget
 {
@@ -22,6 +24,8 @@ private slots:
     void onAdd();
     void onEdit();
     void onDelete();
+    void onShowZones();
+    void editCaptureById(int id);
     void onSearch(const QString &text);
     void onSortByNavire();
     void onSortByDate();
@@ -31,6 +35,9 @@ private slots:
 private:
     QTableWidget *table;
     QLineEdit *lineSearch;
+    QComboBox *comboTypeFilter;
+    QDateEdit *dateFrom;
+    QDateEdit *dateTo;
     QLabel *statTotal;
     QLabel *statTotalQuantite;
     QLabel *statMoyenneQuantite;

@@ -5,54 +5,73 @@
 #include <QPushButton>
 #include <QMessageBox>
 #include <QLabel>
+#include <QIntValidator>
 
 AddEditShipDialog::AddEditShipDialog(QWidget *parent, bool isEdit)
     : QDialog(parent), isEditMode(isEdit)
 {
-    setWindowTitle(isEdit ? "Modifier Navire" : "Ajouter Navire");
+    setWindowTitle(isEdit ? "Modifier le navire" : "Nouveau navire");
     setModal(true);
-    setMinimumWidth(400);
+    setMinimumSize(500, 550);
 
     QVBoxLayout *mainLayout = new QVBoxLayout(this);
+    mainLayout->setContentsMargins(32, 32, 32, 32);
+    mainLayout->setSpacing(24);
 
-    QLabel *titleLabel = new QLabel(isEdit ? "<b>Modifier les informations</b>" : "<b>Nouveau Navire</b>");
-    titleLabel->setStyleSheet("font-size: 14px; color: #03224c;");
+    QLabel *titleLabel = new QLabel(isEdit ? "Informations du navire" : "Ajouter un nouveau navire");
+    titleLabel->setObjectName("titleLabel");
     mainLayout->addWidget(titleLabel);
 
     QFormLayout *formLayout = new QFormLayout();
+    formLayout->setLabelAlignment(Qt::AlignLeft);
+    formLayout->setSpacing(15);
+    formLayout->setFieldGrowthPolicy(QFormLayout::AllNonFixedFieldsGrow);
 
     lineImmatriculation = new QLineEdit(this);
     lineImmatriculation->setReadOnly(isEdit);
-    lineImmatriculation->setPlaceholderText("Immatriculation");
-    formLayout->addRow("Immatriculation:", lineImmatriculation);
+    lineImmatriculation->setPlaceholderText("Ex: PRT-12345");
+    formLayout->addRow("Immatriculation", lineImmatriculation);
 
     lineNom = new QLineEdit(this);
-    lineNom->setPlaceholderText("Nom du navire");
-    formLayout->addRow("Nom:", lineNom);
+    lineNom->setPlaceholderText("Nom du bâtiment");
+    formLayout->addRow("Nom du navire", lineNom);
 
     comboType = new QComboBox(this);
     comboType->addItems({"Pêche industrielle", "Pêche côtière", "Palangrier", "Senneur", "Chalutier"});
     comboType->setEditable(true);
-    formLayout->addRow("Type:", comboType);
+    formLayout->addRow("Type de pêche", comboType);
 
     lineCapacite = new QLineEdit(this);
-    lineCapacite->setPlaceholderText("Capacité en tonnes");
-    formLayout->addRow("Capacité (T):", lineCapacite);
+    lineCapacite->setPlaceholderText("0");
+    lineCapacite->setValidator(new QIntValidator(1, 10000, this));
+    formLayout->addRow("Capacité (Tonnes)", lineCapacite);
 
     comboStatut = new QComboBox(this);
     comboStatut->addItems({"Disponible", "En mer", "Maintenance", "Interdit"});
-    formLayout->addRow("Statut:", comboStatut);
+    formLayout->addRow("Statut actuel", comboStatut);
 
     mainLayout->addLayout(formLayout);
+    mainLayout->addStretch();
 
-    QDialogButtonBox *buttonBox = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
-    buttonBox->button(QDialogButtonBox::Ok)->setText("Save");
-    buttonBox->button(QDialogButtonBox::Cancel)->setText("Cancel");
-    
-    connect(buttonBox, &QDialogButtonBox::accepted, this, &AddEditShipDialog::onAccepted);
-    connect(buttonBox, &QDialogButtonBox::rejected, this, &QDialog::reject);
+    QHBoxLayout *buttonLayout = new QHBoxLayout();
+    buttonLayout->setSpacing(12);
+    buttonLayout->addStretch();
 
-    mainLayout->addWidget(buttonBox);
+    QPushButton *btnCancel = new QPushButton("Annuler", this);
+    btnCancel->setObjectName("btnCancel");
+    btnCancel->setCursor(Qt::PointingHandCursor);
+    btnCancel->setMinimumHeight(45);
+    connect(btnCancel, &QPushButton::clicked, this, &QDialog::reject);
+    buttonLayout->addWidget(btnCancel);
+
+    QPushButton *btnOk = new QPushButton(isEdit ? "Mettre à jour" : "Enregistrer", this);
+    btnOk->setObjectName("btnOk");
+    btnOk->setCursor(Qt::PointingHandCursor);
+    btnOk->setMinimumHeight(45);
+    connect(btnOk, &QPushButton::clicked, this, &AddEditShipDialog::onAccepted);
+    buttonLayout->addWidget(btnOk);
+
+    mainLayout->addLayout(buttonLayout);
 }
 
 AddEditShipDialog::~AddEditShipDialog()
@@ -103,6 +122,11 @@ void AddEditShipDialog::onAccepted()
 
     if (lineNom->text().trimmed().isEmpty()) {
         QMessageBox::warning(this, "Erreur", "Veuillez entrer le nom du navire");
+        return;
+    }
+
+    if (lineCapacite->text().trimmed().isEmpty()) {
+        QMessageBox::warning(this, "Erreur", "Veuillez entrer une capacité valide (nombre entier).");
         return;
     }
 
