@@ -1,0 +1,142 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Smart Fishing Port - 3D Map</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+    
+    html, body, #cesiumContainer { 
+        height: 100%; margin: 0; padding: 0; overflow: hidden; 
+        font-family: 'Inter', sans-serif;
+    }
+    
+    #panel { 
+        position: absolute; top: 20px; left: 20px; z-index: 99; 
+        background: rgba(255, 255, 255, 0.95); 
+        padding: 20px; border-radius: 12px; 
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        width: 280px;
+        max-height: 80vh;
+        overflow-y: auto;
+    }
+
+    #panel h2 {
+        margin: 0 0 15px 0;
+        font-size: 18px;
+        color: #0f172a;
+        font-weight: 700;
+        border-bottom: 2px solid #3b82f6;
+        padding-bottom: 8px;
+    }
+
+    .zone-item {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 10px;
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+
+    .zone-item:hover {
+        background: #eff6ff;
+        border-color: #3b82f6;
+    }
+
+    .zone-name {
+        font-weight: 600;
+        color: #1e40af;
+        display: block;
+        margin-bottom: 4px;
+    }
+
+    .zone-reason {
+        font-size: 13px;
+        color: #64748b;
+        line-height: 1.4;
+    }
+  </style>
+  <link rel="stylesheet" href="https://unpkg.com/cesium/Build/Cesium/Widgets/widgets.css">
+  <script src="https://unpkg.com/cesium/Build/Cesium/Cesium.js"></script>
+</head>
+<body>
+  <div id="cesiumContainer"></div>
+  <div id="panel">
+    <h2>📍 Zones de Pêche</h2>
+    <div id="list"></div>
+  </div>
+
+  <script>
+    // zones data injected by Qt
+    window.zones = __ZONES_DATA__ || [
+        { name: "Zone Nord A", lat: 37.5, lon: 10.5, reason: "Forte concentration de thon détectée." },
+        { name: "Zone Est B", lat: 37.2, lon: 11.0, reason: "Conditions météo optimales." }
+    ];
+
+    // initialize Cesium viewer using OpenStreetMap imagery
+    var viewer = new Cesium.Viewer('cesiumContainer', {
+        imageryProvider: new Cesium.OpenStreetMapImageryProvider({ url : 'https://a.tile.openstreetmap.org/' }),
+        baseLayerPicker: false,
+        timeline: false,
+        animation: false,
+        navigationHelpButton: false,
+        homeButton: false,
+        geocoder: false,
+        fullscreenButton: false,
+        sceneModePicker: false
+    });
+
+    function addZones(zones) {
+        var list = document.getElementById('list');
+        list.innerHTML = '';
+        for (var i = 0; i < zones.length; ++i) {
+            var z = zones[i];
+            var el = document.createElement('div');
+            el.className = 'zone-item';
+            el.innerHTML = '<span class="zone-name">' + z.name + '</span><span class="zone-reason">' + z.reason + '</span>';
+            
+            // Zoom on click
+            el.onclick = (function(lat, lon) {
+                return function() {
+                    viewer.camera.flyTo({ destination: Cesium.Cartesian3.fromDegrees(lon, lat, 50000) });
+                };
+            })(z.lat, z.lon);
+            
+            list.appendChild(el);
+
+            // Add point
+            var position = Cesium.Cartesian3.fromDegrees(z.lon, z.lat, 0);
+            viewer.entities.add({
+                position: position,
+                point: { 
+                    pixelSize: 14, 
+                    color: Cesium.Color.fromCssColorString('#3b82f6'), 
+                    outlineColor: Cesium.Color.WHITE, 
+                    outlineWidth: 3 
+                },
+                label: { 
+                    text: z.name, 
+                    font: 'bold 14px Inter, sans-serif', 
+                    style: Cesium.LabelStyle.FILL_AND_OUTLINE, 
+                    outlineWidth: 2, 
+                    verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+                    pixelOffset: new Cesium.Cartesian2(0, -15)
+                }
+            });
+        }
+        if (zones.length > 0) {
+            var first = zones[0];
+            viewer.camera.flyTo({ destination: Cesium.Cartesian3.fromDegrees(first.lon, first.lat, 200000) });
+        }
+    }
+
+    try {
+        addZones(window.zones);
+    } catch (e) {
+        console.error('Error adding zones', e);
+    }
+  </script>
+</body>
+</html>
