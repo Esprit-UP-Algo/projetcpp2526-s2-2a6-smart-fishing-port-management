@@ -1,0 +1,47 @@
+==========================================================
+        LISTE DES COMMANDES DE L'ASSISTANT LOCAL 🤖
+==========================================================
+
+Voici les questions et mots-clés que vous pouvez utiliser 
+avec votre assistant local pour interroger la base :
+
+1. SALUTATIONS
+   - "Bonjour"
+   - "Salut"
+
+2. RECOMMANDATIONS (Basé sur la plus grande capacité)
+   - "Recommande-moi un navire"
+   - "Quel est le meilleur navire ?"
+   - "Conseille-moi un navire"
+
+3. LISTE ET GÉNÉRAL
+   - "Donne-moi la liste des navires"
+   - "Affiche tous les navires"
+   - "Liste"
+
+4. STATUTS DE NAVIGATION
+   - "Quels navires sont à quai ?"
+   - "Qui est au quai ?"
+   - "Quels navires sont en mer ?"
+   - "Qui est en mer ?"
+
+5. SÉCURITÉ ET RESTRICTIONS
+   - "Liste des navires interdits"
+   - "Quels sont les navires interdits ?"
+   - "Interdit"
+
+6. STATISTIQUES ET CAPACITÉ
+   - "Quelle est la capacité totale ?"
+   - "Quelle est la moyenne de capacité ?"
+   - "Donne-moi la moyenne"
+   - "Quel est le plus petit navire ?"
+   - "Navire avec le moins de capacité"
+
+7. RECHERCHE SPÉCIFIQUE
+   - "Cherche [Nom du navire]" (Ex: "Cherche Titanic")
+   - "Trouve [Nom du navire]"
+
+==========================================================
+L'assistant n'est pas sensible à la casse (Majuscules).
+Toutes les données proviennent de votre base de données locale.
+==========================================================

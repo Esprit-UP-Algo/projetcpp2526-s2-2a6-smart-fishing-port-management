@@ -1,0 +1,344 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>NAVIRE</class>
+ <widget class="QMainWindow" name="NAVIRE">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>800</width>
+    <height>600</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>NAVIRE</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <property name="styleSheet">
+    <string notr="true">QWidget#centralwidget {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                                stop:0 #1E3A8A,
+                                stop:1 #0F172A);
+    }
+
+QWidget#formWidget {
+    background-color: #E0F2FE;
+    border-radius: 16px;
+    padding: 16px;
+}
+
+QGroupBox {
+    background-color: #FFFFFF;
+    border-radius: 12px;
+    margin-top: 12px;
+    padding: 16px;
+    border: 1px solid rgba(15,23,42,40);
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    left: 10px;
+    padding: 0 4px;
+    color: #1E3A8A;
+    font-weight: 600;
+    letter-spacing: 1px;
+}
+
+QLabel {
+    color: #0F172A;
+    font-weight: 500;
+}
+
+QLineEdit, QSpinBox, QComboBox {
+    background-color: #FFFFFF;
+    border: 1px solid #CBD5F5;
+    border-radius: 6px;
+    padding: 4px 8px;
+}
+
+QLineEdit:focus, QSpinBox:focus, QComboBox:focus {
+    border: 1px solid #1E3A8A;
+}
+
+QPushButton {
+    background-color: #1E3A8A;
+    color: #FFFFFF;
+    border-radius: 8px;
+    padding: 6px 16px;
+    border: none;
+    font-weight: 600;
+}
+
+QPushButton:hover {
+    background-color: #1D4ED8;
+}
+
+QPushButton:pressed {
+    background-color: #1E40AF;
+}
+
+QTableView {
+    background-color: #E0F2FE;
+    gridline-color: #CBD5F5;
+    border-radius: 12px;
+    border: 1px solid #1E3A8A;
+}
+
+QHeaderView::section {
+    background-color: #1E3A8A;
+    color: #FFFFFF;
+    padding: 6px;
+    border: none;
+}</string>
+   </property>
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <item>
+      <widget class="QWidget" name="formWidget">
+       <layout class="QVBoxLayout" name="verticalLayout">
+        <item>
+         <widget class="QGroupBox" name="groupBox">
+          <property name="title">
+           <string>Informations du navire</string>
+          </property>
+          <layout class="QFormLayout" name="formLayout">
+           <item row="0" column="0">
+            <widget class="QLabel" name="label_id_navire">
+             <property name="text">
+              <string>ID Navire</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QSpinBox" name="spinBox_id_navire">
+             <property name="minimum">
+              <number>1</number>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="0">
+            <widget class="QLabel" name="label_nom">
+             <property name="text">
+              <string>Nom</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <widget class="QLineEdit" name="lineEdit_nom"/>
+           </item>
+           <item row="2" column="0">
+            <widget class="QLabel" name="label_immatriculation">
+             <property name="text">
+              <string>Immatriculation</string>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="1">
+            <widget class="QLineEdit" name="lineEdit_immatriculation"/>
+           </item>
+           <item row="3" column="0">
+            <widget class="QLabel" name="label_type">
+             <property name="text">
+              <string>Type</string>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="1">
+            <widget class="QLineEdit" name="lineEdit_type"/>
+           </item>
+           <item row="4" column="0">
+            <widget class="QLabel" name="label_capacite">
+             <property name="text">
+              <string>Capacité</string>
+             </property>
+            </widget>
+           </item>
+           <item row="4" column="1">
+            <widget class="QSpinBox" name="spinBox_capacite">
+             <property name="minimum">
+              <number>1</number>
+             </property>
+            </widget>
+           </item>
+           <item row="5" column="0">
+            <widget class="QLabel" name="label_statut">
+             <property name="text">
+              <string>Statut</string>
+             </property>
+            </widget>
+           </item>
+           <item row="5" column="1">
+            <widget class="QComboBox" name="comboBox_statut">
+             <item>
+              <property name="text">
+               <string>à quai</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>en mer</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>interdit</string>
+              </property>
+             </item>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_buttons">
+          <item>
+           <widget class="QPushButton" name="pushButton_ajouter">
+            <property name="text">
+             <string>Ajouter</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="pushButton_modifier">
+            <property name="text">
+             <string>Modifier</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="pushButton_supprimer">
+            <property name="text">
+             <string>Supprimer</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <spacer name="verticalSpacer">
+          <property name="orientation">
+           <enum>Qt::Vertical</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>40</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item>
+      <layout class="QVBoxLayout" name="verticalLayout_right">
+       <item>
+        <widget class="QGroupBox" name="groupBox_recherche">
+         <property name="title">
+          <string>Recherche et Filtres</string>
+         </property>
+         <layout class="QHBoxLayout" name="horizontalLayout_recherche">
+          <item>
+           <widget class="QLineEdit" name="lineEdit_recherche">
+            <property name="placeholderText">
+             <string>Rechercher par nom...</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QComboBox" name="comboBox_filtre_statut">
+            <item>
+             <property name="text">
+              <string>Tous les statuts</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>à quai</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>en mer</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>interdit</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="pushButton_tri_asc">
+            <property name="text">
+             <string>Tri Asc ↑</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="pushButton_tri_desc">
+            <property name="text">
+             <string>Tri Desc ↓</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QTableView" name="tableView_navires"/>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="horizontalLayout_footer">
+         <item>
+          <widget class="QPushButton" name="pushButton_export_pdf">
+           <property name="text">
+            <string>Exporter PDF</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pushButton_stats">
+           <property name="text">
+            <string>Statistiques 📊</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pushButton_historique">
+           <property name="text">
+            <string>Historique ✅</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pushButton_chatbot">
+           <property name="text">
+            <string>AI Chatbot 🤖</string>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">QPushButton { background-color: #7E22CE; }</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+      </layout>
+     </item>
+    </layout>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>800</width>
+     <height>26</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
