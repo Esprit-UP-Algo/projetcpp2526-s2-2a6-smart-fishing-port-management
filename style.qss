@@ -1,0 +1,269 @@
+/* Global Stylesheet for Smart Fishing Port Management */
+
+QMainWindow, QDialog {
+    background-color: #f8fafc;
+    color: #1e293b;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+/* Sidebar Styling */
+#sidebar {
+    background-color: #0f172a;
+    min-width: 240px;
+    max-width: 240px;
+}
+
+#sidebar QPushButton {
+    background-color: transparent;
+    color: #94a3b8;
+    text-align: left;
+    padding: 12px 20px;
+    border: none;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+#sidebar QPushButton:hover {
+    background-color: #1e293b;
+    color: #f8fafc;
+}
+
+#sidebar QPushButton:checked {
+    background-color: #3b82f6;
+    color: #ffffff;
+    font-weight: 600;
+}
+
+/* Logo */
+#logo {
+    color: #ffffff;
+    font-size: 20px;
+    font-weight: 800;
+    padding: 30px 10px;
+    letter-spacing: 1px;
+}
+
+/* Header/Title Styling */
+QLabel#titleLabel {
+    font-size: 24px;
+    font-weight: 700;
+    color: #0f172a;
+    padding: 10px 0;
+}
+
+/* Buttons */
+QPushButton {
+    background-color: #3b82f6;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-weight: 600;
+    border: none;
+    font-size: 13px;
+}
+
+QPushButton:hover {
+    background-color: #2563eb;
+}
+
+QPushButton:pressed {
+    background-color: #1d4ed8;
+}
+
+QPushButton:disabled {
+    background-color: #cbd5e1;
+    color: #64748b;
+}
+
+/* Action-specific buttons */
+QPushButton#btnAdd, QPushButton#btnOk, QPushButton.success {
+    background-color: #10b981;
+}
+
+QPushButton#btnAdd:hover, QPushButton#btnOk:hover, QPushButton.success:hover {
+    background-color: #059669;
+}
+
+QDialogButtonBox QPushButton {
+    min-width: 100px;
+    min-height: 36px;
+}
+
+QPushButton#btnDelete, QPushButton.danger {
+    background-color: #ef4444;
+}
+
+QPushButton#btnDelete:hover, QPushButton.danger:hover {
+    background-color: #dc2626;
+}
+
+QPushButton#btnEdit, QPushButton.info {
+    background-color: #0ea5e9;
+}
+
+QPushButton#btnEdit:hover, QPushButton.info:hover {
+    background-color: #0284c7;
+}
+
+QPushButton#btnCancel, QPushButton.cancel {
+    background-color: #f1f5f9;
+    color: #475569;
+}
+
+QPushButton#btnCancel:hover, QPushButton.cancel:hover {
+    background-color: #e2e8f0;
+}
+
+/* Inputs */
+QLineEdit, QComboBox, QDateEdit, QSpinBox, QDoubleSpinBox, QTextEdit {
+    background-color: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 10px 12px;
+    color: #1e293b;
+    selection-background-color: #3b82f6;
+    font-size: 14px;
+}
+
+QLineEdit:focus, QComboBox:focus, QDateEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus, QTextEdit:focus {
+    border: 2px solid #3b82f6;
+    background-color: #ffffff;
+}
+
+/* Group Box */
+QGroupBox {
+    font-weight: 700;
+    font-size: 15px;
+    color: #0f172a;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    margin-top: 20px;
+    padding-top: 30px;
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top left;
+    left: 15px;
+    padding: 0 5px;
+}
+
+/* Login Page Styling */
+#loginContainer {
+    background-color: #ffffff;
+    border-radius: 20px;
+    border: 1px solid #e2e8f0;
+}
+
+#loginTitle {
+    font-size: 28px;
+    font-weight: 800;
+    color: #0f172a;
+    margin-bottom: 20px;
+}
+
+/* Table Widget */
+QTableWidget {
+    background-color: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    gridline-color: #f1f5f9;
+    selection-background-color: #eff6ff;
+    selection-color: #1e40af;
+    outline: none;
+}
+
+QTableWidget::item {
+    padding: 12px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+QHeaderView::section {
+    background-color: #f8fafc;
+    color: #64748b;
+    padding: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 11px;
+    border: none;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+/* Cards/Containers */
+QFrame#card {
+    background-color: #ffffff;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+}
+
+/* Stats Cards */
+QLabel#statCard, QLabel#statLabel {
+    background-color: #ffffff;
+    border: 1px solid #e2e8f0;
+    padding: 16px;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 14px;
+    min-height: 60px;
+}
+
+QLabel[type="stat-blue"] {
+    border-left: 4px solid #3b82f6;
+    color: #1e40af;
+    background-color: #eff6ff;
+}
+
+QLabel[type="stat-green"] {
+    border-left: 4px solid #10b981;
+    color: #065f46;
+    background-color: #ecfdf5;
+}
+
+QLabel[type="stat-orange"] {
+    border-left: 4px solid #f59e0b;
+    color: #92400e;
+    background-color: #fffbeb;
+}
+
+QLabel[type="stat-purple"] {
+    border-left: 4px solid #8b5cf6;
+    color: #5b21b6;
+    background-color: #f5f3ff;
+}
+
+QLabel[type="stat-red"] {
+    border-left: 4px solid #ef4444;
+    color: #991b1b;
+    background-color: #fef2f2;
+}
+
+/* ScrollBars */
+QScrollBar:vertical {
+    border: none;
+    background: #f1f5f9;
+    width: 8px;
+    margin: 0px;
+}
+
+QScrollBar::handle:vertical {
+    background: #cbd5e1;
+    min-height: 20px;
+    border-radius: 4px;
+}
+
+QScrollBar::handle:vertical:hover {
+    background: #94a3b8;
+}
+
+QScrollBar:horizontal {
+    border: none;
+    background: #f1f5f9;
+    height: 8px;
+    margin: 0px;
+}
+
+QScrollBar::handle:horizontal {
+    background: #cbd5e1;
+    min-width: 20px;
+    border-radius: 4px;
+}
