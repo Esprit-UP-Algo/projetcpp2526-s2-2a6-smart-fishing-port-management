@@ -47,7 +47,8 @@
 #include <QGraphicsOpacityEffect>
 #include <QSequentialAnimationGroup>
 #include <QParallelAnimationGroup>
-
+#include <QtSerialPort/QSerialPort>
+#include <QtSerialPort/QSerialPortInfo>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -62,7 +63,7 @@ MainWindow::MainWindow(QWidget *parent)
     generateRandomCaptures();
     setupShipsUi();
     setupTableShips();
-    
+
     setupConnections();
     
     showLoginPage();
@@ -811,11 +812,6 @@ void MainWindow::setupCapturesUi()
     connect(btnSortDate, &QPushButton::clicked, this, &MainWindow::onSortCapturesByDate);
     headerLayout->addWidget(btnSortDate);
 
-    QPushButton *btnSortQty = new QPushButton("⚖️ Trier Quantité", capturesPage);
-    btnSortQty->setObjectName("btnSortQty");
-    connect(btnSortQty, &QPushButton::clicked, this, &MainWindow::onSortCapturesByQuantity);
-    headerLayout->addWidget(btnSortQty);
-
     // Stats button - Same as employee management (Analytics)
     QPushButton *btnStats = new QPushButton("📊 Statistiques", capturesPage);
     btnStats->setObjectName("btnStats");
@@ -843,11 +839,11 @@ void MainWindow::setupCapturesUi()
     QHBoxLayout *advancedLayout = new QHBoxLayout();
     advancedLayout->addStretch();
     
-    // Button 1: Fraud/Illegal Fishing Detection
-    QPushButton *btnFraudDetection = new QPushButton("🎮 Détection Fraude", capturesPage);
-    btnFraudDetection->setStyleSheet(
+    // Button 1: Ship Detection & Barrier Control
+    QPushButton *btnShipDetection = new QPushButton("🚢 Détection Navire", capturesPage);
+    btnShipDetection->setStyleSheet(
         "QPushButton { "
-        "background-color: #808080; "  // Gray color
+        "background-color: #1e40af; "  // Blue theme
         "color: white; "
         "padding: 10px 20px; "
         "border-radius: 8px; "
@@ -855,12 +851,12 @@ void MainWindow::setupCapturesUi()
         "font-size: 13px; "
         "} "
         "QPushButton:hover { "
-        "background-color: #606060; "
+        "background-color: #1e3a8a; "
         "}"
     );
-    btnFraudDetection->setToolTip("Système intelligent de détection de fraude ou de pêche illégale");
-    connect(btnFraudDetection, &QPushButton::clicked, this, &MainWindow::onDetectFraud);
-    advancedLayout->addWidget(btnFraudDetection);
+    btnShipDetection->setToolTip("Moniteur de détection de navires et contrôle des barrières (Arduino Sync)");
+    connect(btnShipDetection, &QPushButton::clicked, this, &MainWindow::onShipDetectionClicked);
+    advancedLayout->addWidget(btnShipDetection);
     
     // Button 2: Fishing Zone Recommendation
     QPushButton *btnZoneRecommendation = new QPushButton("🎮 Zones de Pêche", capturesPage);
@@ -968,7 +964,7 @@ QWidget* MainWindow::createSidebar(QWidget* parent)
         return btn;
     };
 
-    QPushButton *btnDash = addSidebarBtn("📊 Tableau de bord");
+    addSidebarBtn("📊 Tableau de bord");
     QPushButton *btnQuais = addSidebarBtn("⚓ Quais");
     QPushButton *btnNavires = addSidebarBtn("🚢 Navires");
     QPushButton *btnCap = addSidebarBtn("🐟 Captures");
@@ -1027,35 +1023,33 @@ void MainWindow::setupTableCaptures()
         actionLayout->setContentsMargins(0, 0, 0, 0);
         actionLayout->setSpacing(5);
         
-        // Delete button
-        QPushButton *btnDelete = new QPushButton("🗑️");
-        btnDelete->setObjectName("btnDelete");
-        btnDelete->setToolTip("Supprimer");
-        btnDelete->setCursor(Qt::PointingHandCursor);
-        btnDelete->setMaximumWidth(40);
-        connect(btnDelete, &QPushButton::clicked, this, [this, row]() { onDeleteCaptureClicked(row); });
-
         // Edit button
         QPushButton *btnEdit = new QPushButton("✏️");
-        btnEdit->setObjectName("btnEdit");
+        btnEdit->setStyleSheet("QPushButton { background-color: #2196F3; color: white; border-radius: 4px; padding: 4px; font-size: 16px; } QPushButton:hover { background-color: #1976D2; }");
         btnEdit->setToolTip("Modifier");
         btnEdit->setCursor(Qt::PointingHandCursor);
         btnEdit->setMaximumWidth(40);
         connect(btnEdit, &QPushButton::clicked, this, [this, row]() { onEditCaptureClicked(row); });
         actionLayout->addWidget(btnEdit);
 
+        // Delete button
+        QPushButton *btnDelete = new QPushButton("🗑️");
+        btnDelete->setStyleSheet("QPushButton { background-color: #F44336; color: white; border-radius: 4px; padding: 4px; font-size: 16px; } QPushButton:hover { background-color: #D32F2F; }");
+        btnDelete->setToolTip("Supprimer");
+        btnDelete->setCursor(Qt::PointingHandCursor);
+        btnDelete->setMaximumWidth(40);
+        connect(btnDelete, &QPushButton::clicked, this, [this, row]() { onDeleteCaptureClicked(row); });
+        actionLayout->addWidget(btnDelete);
+
         // View button
         QPushButton *btnView = new QPushButton("👀");
-        btnView->setObjectName("btnSecondary");
+        btnView->setStyleSheet("QPushButton { background-color: #ffffff; color: #333; border: 1px solid #ccc; border-radius: 4px; padding: 4px; font-size: 16px; } QPushButton:hover { background-color: #f0f0f0; }");
         btnView->setToolTip("Voir les détails");
         btnView->setCursor(Qt::PointingHandCursor);
         btnView->setMaximumWidth(40);
-        connect(btnView, &QPushButton::clicked, this, [this, row]() {
-            onViewCaptureClicked(row);
-        });
-
-        actionLayout->addWidget(btnDelete);
+        connect(btnView, &QPushButton::clicked, this, [this, row]() { onViewCaptureClicked(row); });
         actionLayout->addWidget(btnView);
+
         tableCaptures->setCellWidget(row, 5, actionWidget);
     }
     // Ensure ID and Actions columns fit their contents (buttons visible)
@@ -1289,12 +1283,7 @@ void MainWindow::onSortCapturesByDate()
     tableCaptures->sortItems(2, Qt::DescendingOrder);
 }
 
-void MainWindow::onSortCapturesByQuantity()
-{
-    // Custom sort for quantity (numeric)
-    // For simplicity using string sort here, but ideally should subclass QTableWidgetItem
-    tableCaptures->sortItems(4, Qt::DescendingOrder);
-}
+// Note: Tri par Quantité supprimé — fonction retirée car bouton non utilisé.
 
 void MainWindow::updateCaptureStats()
 {
@@ -1545,133 +1534,113 @@ void MainWindow::onComparePeriods()
 // ==========================================================================================
 
 // Advanced Feature 1: Intelligent Fraud Detection / Illegal Fishing Detection
-void MainWindow::onDetectFraud()
+void MainWindow::onShipDetectionClicked()
 {
-    if (!tableCaptures || tableCaptures->rowCount() == 0) {
-        QMessageBox::warning(this, "Attention", "Aucune donnee de capture disponible pour l'analyse");
-        return;
-    }
+    QDialog *dlg = new QDialog(this);
+    dlg->setWindowTitle("Contrôle Barrières & Détection Navires");
+    dlg->setMinimumSize(500, 450);
+    dlg->setStyleSheet("QDialog { background-color: #ffffff; }");
 
-    QDialog* fraudDialog = new QDialog(this);
-    fraudDialog->setWindowTitle(" detection de Fraude / Peche Illegale");
-    fraudDialog->setGeometry(100, 100, 900, 600);
-    fraudDialog->setStyleSheet("background-color: white;");
+    QVBoxLayout *mainLayout = new QVBoxLayout(dlg);
 
-    QVBoxLayout* layout = new QVBoxLayout(fraudDialog);
+    QLabel *titleLabel = new QLabel("🚢 Système de Détection et Accès Portuaire", dlg);
+    titleLabel->setAlignment(Qt::AlignCenter);
+    titleLabel->setStyleSheet("font-size: 20px; font-weight: bold; color: #1e3a8a; padding: 15px;");
+    mainLayout->addWidget(titleLabel);
 
-    // Title
-    QLabel* title = new QLabel("<h2> Systeme Intelligent de Detection de Fraude</h2>", fraudDialog);
-    title->setAlignment(Qt::AlignCenter);
-    title->setStyleSheet("color: #03224c; padding: 10px;");
-    layout->addWidget(title);
+    QGroupBox *statusGroup = new QGroupBox("Moniteur de Synchronisation Arduino", dlg);
+    statusGroup->setStyleSheet("QGroupBox { font-weight: bold; border: 2px solid #e2e8f0; border-radius: 10px; margin-top: 15px; padding-top: 15px; }");
+    QGridLayout *grid = new QGridLayout(statusGroup);
 
-    // Analysis results
-    QString report = "<b> RAPPORT D'ANALYSE DE FRAUDE</b><br><br>";
+    QLabel *iconDetection = new QLabel("🔍", dlg);
+    iconDetection->setStyleSheet("font-size: 24px;");
+    QLabel *lblStatus = new QLabel("En attente de signal...", dlg);
+    lblStatus->setStyleSheet("font-size: 14px; color: #64748b;");
     
-    // Collect data
-    QList<double> quantities;
-    QMap<QString, QList<double>> shipQuantities;
+    QLabel *iconBarrier = new QLabel("🚧", dlg);
+    iconBarrier->setStyleSheet("font-size: 24px;");
+    QLabel *lblBarrier = new QLabel("Barrière: Statut Inconnu", dlg);
+    lblBarrier->setStyleSheet("font-size: 14px; font-weight: bold; color: #64748b;");
+
+    grid->addWidget(iconDetection, 0, 0);
+    grid->addWidget(lblStatus, 0, 1);
+    grid->addWidget(iconBarrier, 1, 0);
+    grid->addWidget(lblBarrier, 1, 1);
     
-    for (int i = 0; i < tableCaptures->rowCount(); ++i) {
-        QString qtyText = tableCaptures->item(i, 4)->text().replace(" kg", "");
-        double q = qtyText.toDouble();
-        quantities.append(q);
-        QString navire = tableCaptures->item(i, 1)->text();
-        shipQuantities[navire].append(q);
-    }
+    mainLayout->addWidget(statusGroup);
 
-    // Calculate statistics
-    double totalQty = 0;
-    double maxQty = 0;
-    double minQty = std::numeric_limits<double>::max();
-    for (double q : quantities) {
-        totalQty += q;
-        if (q > maxQty) maxQty = q;
-        if (q < minQty) minQty = q;
-    }
-    double avgQty = quantities.size() > 0 ? totalQty / quantities.size() : 0;
+    QGroupBox *simulGroup = new QGroupBox("Simulation des Événements Capteurs (Arduino)", dlg);
+    QHBoxLayout *simulLayout = new QHBoxLayout(simulGroup);
 
-    // Calculate standard deviation
-    double sqSum = 0;
-    for (double q : quantities) {
-        sqSum += (q - avgQty) * (q - avgQty);
-    }
-    double stdDev = quantities.size() > 1 ? std::sqrt(sqSum / quantities.size()) : 0;
-
-    // Check for anomalies
-    int suspiciousCount = 0;
-
-    report += "<b> ANOMALIES DETECTEES:</b><br><br>";
+    QPushButton *btnArrive = new QPushButton("Entrée Navire", dlg);
+    btnArrive->setStyleSheet("QPushButton { background-color: #10b981; color: white; font-weight: bold; padding: 12px; border-radius: 6px; } QPushButton:hover { background-color: #059669; }");
     
-    // Check 1: Unusually high quantities
-    for (int i = 0; i < tableCaptures->rowCount(); ++i) {
-        QString qtyText = tableCaptures->item(i, 4)->text().replace(" kg", "");
-        double q = qtyText.toDouble();
+    QPushButton *btnLeave = new QPushButton("Sortie Navire", dlg);
+    btnLeave->setStyleSheet("QPushButton { background-color: #ef4444; color: white; font-weight: bold; padding: 12px; border-radius: 6px; } QPushButton:hover { background-color: #dc2626; }");
+
+    simulLayout->addWidget(btnArrive);
+    simulLayout->addWidget(btnLeave);
+    mainLayout->addWidget(simulGroup);
+
+    connect(btnArrive, &QPushButton::clicked, [=]() {
+        lblStatus->setText("Navire détecté à l'entrée !");
+        lblStatus->setStyleSheet("font-size: 14px; font-weight: bold; color: #10b981;");
+        lblBarrier->setText("Barrière: OUVERTURE EN COURS...");
+        lblBarrier->setStyleSheet("font-size: 14px; font-weight: bold; color: #f59e0b;");
         
-        if (q > avgQty + 2 * stdDev) {
-            QString navire = tableCaptures->item(i, 1)->text();
-            QString type = tableCaptures->item(i, 3)->text();
-            QString date = tableCaptures->item(i, 2)->text();
-            report += QString(" Quantite suspecte: %1 kg (Navire: %2, Type: %3, Date: %4)")
-                     .arg(q).arg(navire).arg(type).arg(date);
-            report += "<br>--> La quantite depasse la moyenne de " + QString::number(static_cast<int>(q - avgQty)) + " kg de plus de 2 ecarts-types<br><br";
-            suspiciousCount++;
+        // Envoi de la commande 'E' à l'Arduino
+        QSerialPort serial;
+        for (const QSerialPortInfo &info : QSerialPortInfo::availablePorts()) {
+            // On cherche un port qui ressemble à un Arduino
+            if (info.description().contains("Arduino") || info.manufacturer().contains("Arduino")) {
+                serial.setPort(info);
+                    if (serial.open(QIODevice::WriteOnly)) {
+                    serial.setBaudRate(QSerialPort::Baud9600);
+                    serial.write("OPEN\n");
+                    serial.close();
+                }
+                break;
+            }
         }
-    }
 
-    // Check 2: Ships with consistently high quantities
-    for (auto it = shipQuantities.begin(); it != shipQuantities.end(); ++it) {
-        double shipTotal = 0;
-        double shipCount = it.value().size();
-        for (double q : it.value()) {
-            shipTotal += q;
-        }
-        double shipAvg = shipCount > 0 ? shipTotal / shipCount : 0;
+        QTimer::singleShot(1500, [=]() {
+            lblBarrier->setText("Barrière: OUVERTE ✅");
+            lblBarrier->setStyleSheet("font-size: 14px; font-weight: bold; color: #10b981;");
+        });
+    });
+
+    connect(btnLeave, &QPushButton::clicked, [=]() {
+        lblStatus->setText("Zone dégagée - Signal reçu.");
+        lblStatus->setStyleSheet("font-size: 14px; font-weight: bold; color: #64748b;");
+        lblBarrier->setText("Barrière: FERMETURE EN COURS...");
+        lblBarrier->setStyleSheet("font-size: 14px; font-weight: bold; color: #f59e0b;");
         
-        if (shipAvg > avgQty * 1.5) {
-            report += QString(" Navire suspect: %1").arg(it.key());
-            report += "<br>--> Moyenne des captures: " + QString::number(static_cast<int>(shipAvg)) + " kg (Moyenne globale: " + QString::number(static_cast<int>(avgQty)) + " kg)<br><br";
-            suspiciousCount++;
+        // Envoi de la commande 'S' à l'Arduino
+        QSerialPort serial;
+        for (const QSerialPortInfo &info : QSerialPortInfo::availablePorts()) {
+            if (info.description().contains("Arduino") || info.manufacturer().contains("Arduino")) {
+                serial.setPort(info);
+                if (serial.open(QIODevice::WriteOnly)) {
+                    serial.setBaudRate(QSerialPort::Baud9600);
+                    serial.write("CLOSE\n");
+                    serial.close();
+                }
+                break;
+            }
         }
-    }
 
-    if (suspiciousCount == 0) {
-        report += " Aucune anomalie majeure detectee<br>";
-        report += "<br><i>Le systeme n'a trouve aucune indication de fraude ou de peche illegale.</i><br>";
-    } else {
-        report += "<br><b> RESUME:</b><br>";
-        report += QString("--> <b>%1</b> anomalies potentielles detectees<br>").arg(suspiciousCount);
-        report += "--> Une enquete plus approfondie est recommandee<br";
-    }
+        QTimer::singleShot(1500, [=]() {
+            lblBarrier->setText("Barrière: FERMÉE 🔒");
+            lblBarrier->setStyleSheet("font-size: 14px; font-weight: bold; color: #ef4444;");
+        });
+    });
 
-    // Statistics section
-    report += "<br><br><b> STATISTIQUES DE REFERENCE:</b><br>";
-    report += QString("Moyenne des captures: <b>%1 kg</b><br>").arg(static_cast<int>(avgQty));
-    report += QString("Ecart-type: <b>%1 kg</b><br>").arg(static_cast<int>(stdDev));
-    report += QString("Seuil d'alerte: <b>%1 kg</b> (moyenne + 2xecart-type)<br>").arg(static_cast<int>(avgQty + 2*stdDev));
+    QPushButton *btnClose = new QPushButton("Quitter le moniteur", dlg);
+    btnClose->setStyleSheet("background-color: #1e3a8a; color: white; padding: 10px; border-radius: 5px; font-weight: bold;");
+    connect(btnClose, &QPushButton::clicked, dlg, &QDialog::accept);
+    mainLayout->addWidget(btnClose);
 
-    QScrollArea* scrollArea = new QScrollArea();
-    scrollArea->setWidgetResizable(true);
-    
-    QLabel* reportLabel = new QLabel(report);
-    reportLabel->setStyleSheet("background-color: #f5f5f5; padding: 15px; border-radius: 8px; color: #03224c; font-size: 13px;");
-    reportLabel->setWordWrap(true);
-    reportLabel->setMinimumHeight(300);
-    
-    scrollArea->setWidget(reportLabel);
-    layout->addWidget(scrollArea);
-
-    // Buttons
-    QHBoxLayout* buttonLayout = new QHBoxLayout();
-    
-    QPushButton* closeBtn = new QPushButton("Fermer");
-    closeBtn->setStyleSheet("QPushButton { background-color: #03224c; color: white; padding: 10px 20px; border-radius: 5px; font-weight: bold; }");
-    connect(closeBtn, &QPushButton::clicked, fraudDialog, &QDialog::accept);
-    buttonLayout->addWidget(closeBtn);
-    
-    layout->addLayout(buttonLayout);
-    
-    fraudDialog->exec();
+    dlg->exec();
 }
 
 // Advanced Feature 2: Intelligent Fishing Zone Recommendation
@@ -1887,8 +1856,8 @@ void MainWindow::generateCaptureAnalyticsPDF()
     }
 
     int pageWidth = pdfWriter.width();
-    int margin = 80;
-    int lineHeight = 40;
+    int margin = 150; // Marge plus large pour 300 DPI
+    int lineHeight = 60; // Hauteur de ligne augmentée pour la lisibilité
 
     QFont titleFont("Arial", 24, QFont::Bold);
     QFont headingFont("Arial", 14, QFont::Bold);
@@ -1920,50 +1889,50 @@ void MainWindow::generateCaptureAnalyticsPDF()
 
     // TITRE
     painter.setFont(titleFont);
-    painter.drawText(margin, y, pageWidth - 2*margin, 50, Qt::AlignCenter, "Rapport Statistiques des Captures");
-    y += 60;
+    painter.drawText(margin, y, pageWidth - 2*margin, 100, Qt::AlignCenter, "Rapport Statistiques des Captures");
+    y += 120;
 
     painter.setFont(normalFont);
-    painter.drawText(margin, y, pageWidth - 2*margin, 30, Qt::AlignCenter,
+    painter.drawText(margin, y, pageWidth - 2*margin, 50, Qt::AlignCenter,
                      "Généré le: " + QDateTime::currentDateTime().toString("dd/MM/yyyy hh:mm"));
-    y += 50;
+    y += 80;
 
     painter.drawLine(margin, y, pageWidth - margin, y);
     y += 40;
 
     painter.setFont(headingFont);
-    painter.drawText(margin, y, pageWidth - 2*margin, 30, Qt::AlignLeft, "📊 Statistics Summary");
-    y += 50;
+    painter.drawText(margin, y, pageWidth - 2*margin, 60, Qt::AlignLeft, "📊 Résumé des Statistiques");
+    y += 80;
 
     painter.setFont(normalFont);
-    painter.drawText(margin + 40, y, pageWidth - 2*margin - 40, 25, Qt::AlignLeft,
+    painter.drawText(margin + 40, y, pageWidth - 2*margin - 40, 50, Qt::AlignLeft,
                      "Total Captures: " + QString::number(totalCaptures));
     y += lineHeight;
-    painter.drawText(margin + 40, y, pageWidth - 2*margin - 40, 25, Qt::AlignLeft,
+    painter.drawText(margin + 40, y, pageWidth - 2*margin - 40, 50, Qt::AlignLeft,
                      "Quantité Totale: " + QString::number(static_cast<int>(totalQty)) + " kg");
     y += lineHeight;
-    painter.drawText(margin + 40, y, pageWidth - 2*margin - 40, 25, Qt::AlignLeft,
+    painter.drawText(margin + 40, y, pageWidth - 2*margin - 40, 50, Qt::AlignLeft,
                      "Moyenne par Capture: " + QString::number(static_cast<int>(avgQty)) + " kg");
     y += lineHeight;
-    painter.drawText(margin + 40, y, pageWidth - 2*margin - 40, 25, Qt::AlignLeft,
+    painter.drawText(margin + 40, y, pageWidth - 2*margin - 40, 50, Qt::AlignLeft,
                      "Max d'une Capture: " + QString::number(static_cast<int>(maxQty)) + " kg");
     y += lineHeight;
-    painter.drawText(margin + 40, y, pageWidth - 2*margin - 40, 25, Qt::AlignLeft,
+    painter.drawText(margin + 40, y, pageWidth - 2*margin - 40, 50, Qt::AlignLeft,
                      "Min d'une Capture: " + QString::number((minQty==std::numeric_limits<double>::max()?0:static_cast<int>(minQty))) + " kg");
-    y += 50;
+    y += 80;
 
     painter.drawLine(margin, y, pageWidth - margin, y);
     y += 40;
 
     painter.setFont(headingFont);
-    painter.drawText(margin, y, pageWidth - 2*margin, 30, Qt::AlignLeft, "📊 Répartition par Type");
-    y += 50;
+    painter.drawText(margin, y, pageWidth - 2*margin, 60, Qt::AlignLeft, "📊 Répartition par Type de Poisson");
+    y += 80;
 
     painter.setFont(normalFont);
     for (auto it = qtyByType.begin(); it != qtyByType.end(); ++it) {
-        painter.drawText(margin + 40, y, pageWidth - 2*margin - 40, 25, Qt::AlignLeft,
+        painter.drawText(margin + 40, y, pageWidth - 2*margin - 40, 50, Qt::AlignLeft,
                          it.key() + ": " + QString::number(static_cast<int>(it.value())) + " kg");
-        y += 30;
+        y += 60;
         if (y > pdfWriter.height() - 200) { pdfWriter.newPage(); y = 80; }
     }
 
@@ -2003,22 +1972,23 @@ void MainWindow::onExportCapturesPdf()
     // Simple table header
     painter.setFont(headerFont);
     painter.drawText(margin, y, "Navire");
-    painter.drawText(1100, y, "Date");
-    painter.drawText(1800, y, "Type de Poisson");
-    painter.drawText(2600, y, "Quantité");
+    painter.drawText(margin + 700, y, "Date");
+    painter.drawText(margin + 1200, y, "Type de Poisson");
+    painter.drawText(margin + 1800, y, "Quantité");
     y += 40;
     painter.drawLine(margin, y, writer.width() - margin, y);
     y += 80;
 
+    int rowHeight = 80;
     painter.setFont(normalFont);
     for (int i = 0; i < tableCaptures->rowCount(); ++i) {
         if (tableCaptures->isRowHidden(i)) continue;
         
         painter.drawText(margin, y, tableCaptures->item(i, 1)->text());
-        painter.drawText(1100, y, tableCaptures->item(i, 2)->text());
-        painter.drawText(1800, y, tableCaptures->item(i, 3)->text());
-        painter.drawText(2600, y, tableCaptures->item(i, 4)->text());
-        y += 100;
+        painter.drawText(margin + 700, y, tableCaptures->item(i, 2)->text());
+        painter.drawText(margin + 1200, y, tableCaptures->item(i, 3)->text());
+        painter.drawText(margin + 1800, y, tableCaptures->item(i, 4)->text());
+        y += rowHeight;
         
         if (y > writer.height() - 200) {
             writer.newPage();
