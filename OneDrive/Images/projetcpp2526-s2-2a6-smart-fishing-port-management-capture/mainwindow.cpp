@@ -47,8 +47,8 @@
 #include <QGraphicsOpacityEffect>
 #include <QSequentialAnimationGroup>
 #include <QParallelAnimationGroup>
-#include <QtSerialPort/QSerialPort>
-#include <QtSerialPort/QSerialPortInfo>
+#include <QSerialPort>
+#include <QSerialPortInfo>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
