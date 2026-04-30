@@ -37,6 +37,7 @@ void FishingZones3DDialog::loadMapWithZones(const QList<ZoneEntry3D> &zones)
     QString html = QString::fromUtf8(f.readAll());
     f.close();
 
+    // Zones JSON
     QJsonArray arr;
     for (const ZoneEntry3D &z : zones) {
         QJsonObject o;

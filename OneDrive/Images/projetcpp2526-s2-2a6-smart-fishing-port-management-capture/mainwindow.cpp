@@ -1594,9 +1594,9 @@ void MainWindow::onShipDetectionClicked()
             // On cherche un port qui ressemble à un Arduino
             if (info.description().contains("Arduino") || info.manufacturer().contains("Arduino")) {
                 serial.setPort(info);
-                    if (serial.open(QIODevice::WriteOnly)) {
+                if (serial.open(QIODevice::WriteOnly)) {
                     serial.setBaudRate(QSerialPort::Baud9600);
-                    serial.write("OPEN\n");
+                    serial.write("S");
                     serial.close();
                 }
                 break;
@@ -1622,7 +1622,7 @@ void MainWindow::onShipDetectionClicked()
                 serial.setPort(info);
                 if (serial.open(QIODevice::WriteOnly)) {
                     serial.setBaudRate(QSerialPort::Baud9600);
-                    serial.write("CLOSE\n");
+                    serial.write("S");
                     serial.close();
                 }
                 break;

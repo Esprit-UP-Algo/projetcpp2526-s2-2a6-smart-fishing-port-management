@@ -5,6 +5,8 @@
 #include <QSqlError>
 #include <QMutex>
 #include <QMutexLocker>
+#include <QStandardPaths>
+#include <QDir>
 
 // Initialisation du pointeur d'instance
 Connection* Connection::p_instance = nullptr;
@@ -62,19 +64,23 @@ bool Connection::createConnect()
         db = QSqlDatabase();
         if (!oldName.isEmpty()) QSqlDatabase::removeDatabase(oldName);
 
-        // Try SQLite as fallback
+        // Try SQLite as fallback — store DB in a stable AppData location so data persists
         db = QSqlDatabase::addDatabase("QSQLITE");
-        QString dbFile = QCoreApplication::applicationDirPath() + "/fishtech.sqlite";
+        QString dataDir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+        if (dataDir.isEmpty()) dataDir = QCoreApplication::applicationDirPath();
+        QDir().mkpath(dataDir);
+        QString dbFile = dataDir + QDir::separator() + "fishtech.sqlite";
         db.setDatabaseName(dbFile);
 
         if (db.open()) {
+            qDebug() << "Connexion SQLite réussie. Fichier DB:" << dbFile;
             test = true;
             QSqlQuery q(db);
             q.exec("CREATE TABLE IF NOT EXISTS captures (ID_Capture INTEGER PRIMARY KEY AUTOINCREMENT, Navire TEXT, Date_Capture TEXT, Type_Poisson TEXT, Quantite INTEGER)");
             q.exec("CREATE TABLE IF NOT EXISTS navires (ID_Navire INTEGER PRIMARY KEY AUTOINCREMENT, Nom TEXT, Immatriculation TEXT, Type TEXT, Capacite INTEGER, Statut TEXT)");
             q.exec("CREATE TABLE IF NOT EXISTS navire_history (ID_History INTEGER PRIMARY KEY AUTOINCREMENT, ID_Navire INTEGER, Old_Statut TEXT, New_Statut TEXT, Date_Change TEXT)");
             q.exec("CREATE TABLE IF NOT EXISTS quais (ID_Quai INTEGER PRIMARY KEY AUTOINCREMENT, Nom TEXT, Places INTEGER, Navires INTEGER, Adresse TEXT, Travaux INTEGER DEFAULT 0)");
-            qDebug() << "Connexion SQLite réussie";
+            // qDebug already reported DB path above
         } else {
             // If both ODBC and SQLite fail, show error
             qWarning() << "Échec de connexion à la base de données:" << db.lastError().text();

@@ -21,6 +21,7 @@
 #include <QDebug>
 #include <algorithm>
 #include <limits>
+#include <QRandomGenerator> // For dummy ship data
 
 CapturesDialog::CapturesDialog(QWidget *parent)
     : QWidget(parent), table(nullptr), lineSearch(nullptr), 
@@ -338,16 +339,40 @@ void CapturesDialog::loadData()
         }
         
         // Actions column with edit button
+        QWidget *actionWidget = new QWidget();
+        QHBoxLayout *actionLayout = new QHBoxLayout(actionWidget);
+        actionLayout->setContentsMargins(2, 2, 2, 2);
+        actionLayout->setSpacing(4);
+
         QPushButton *btnEdit = new QPushButton("✏️");
-        btnEdit->setToolTip("Modifier");
-        btnEdit->setStyleSheet("QPushButton { background-color: #2196F3; color: white; border: none; border-radius: 3px; padding: 3px 8px; }");
+        btnEdit->setStyleSheet("QPushButton { background-color: #2196F3; color: white; border-radius: 4px; padding: 4px; }");
         btnEdit->setMaximumWidth(40);
-        // Capture the actual ID stored in the row's UserRole to avoid relying on row index
         int recordId = q.value(0).toInt();
-        connect(btnEdit, &QPushButton::clicked, this, [this, recordId]() {
-            editCaptureById(recordId);
+        connect(btnEdit, &QPushButton::clicked, this, [this, recordId]() { editCaptureById(recordId); });
+        actionLayout->addWidget(btnEdit);
+
+        QPushButton *btnDelete = new QPushButton("🗑️");
+        btnDelete->setStyleSheet("QPushButton { background-color: #F44336; color: white; border-radius: 4px; padding: 4px; }");
+        btnDelete->setMaximumWidth(40);
+        connect(btnDelete, &QPushButton::clicked, this, [this, recordId]() {
+            // Logic to delete by ID could be added here similar to editCaptureById
+            QMessageBox::StandardButton reply = QMessageBox::question(this, "Confirmer", "Supprimer cette capture ?");
+            if (reply == QMessageBox::Yes) {
+                QSqlQuery dq;
+                dq.prepare("DELETE FROM captures WHERE ID_Capture = ?");
+                dq.addBindValue(recordId);
+                dq.exec();
+                loadData();
+            }
         });
-        table->setCellWidget(row, 5, btnEdit);
+        actionLayout->addWidget(btnDelete);
+
+        QPushButton *btnView = new QPushButton("👀");
+        btnView->setStyleSheet("QPushButton { background-color: #ffffff; border: 1px solid #ccc; border-radius: 4px; padding: 4px; }");
+        btnView->setMaximumWidth(40);
+        actionLayout->addWidget(btnView);
+
+        table->setCellWidget(row, 5, actionWidget);
     }
     table->setColumnHidden(0, false);
     updateStats();

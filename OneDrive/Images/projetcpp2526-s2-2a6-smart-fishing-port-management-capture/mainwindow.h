@@ -2,7 +2,6 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
-#include "addedit_employeedialog.h"
 #include "gestionquai.h"
 #include <QTableWidget>
 #include <QLabel>
@@ -58,11 +57,10 @@ private slots:
     void onViewCaptureClicked(int row);
     void onSearchCaptures(const QString &text);
     void onSortCapturesByDate();
-    void onSortCapturesByQuantity();
     void onShowCaptureStats();
     void onDetectAnomalies(); // Advanced 1
     void onComparePeriods();  // Advanced 2
-    void onDetectFraud();     // Fraud Detection
+    void onShipDetectionClicked(); // Ship Detection & Barrier Control (Arduino Sync)
     void onRecommendFishingZones(); // Fishing Zone Recommendation
     void onExportCapturesPdf();
 

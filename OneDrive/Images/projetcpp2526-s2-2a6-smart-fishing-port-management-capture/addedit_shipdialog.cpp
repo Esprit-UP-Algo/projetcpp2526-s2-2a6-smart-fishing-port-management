@@ -5,6 +5,7 @@
 #include <QPushButton>
 #include <QMessageBox>
 #include <QLabel>
+#include <QDoubleValidator>
 #include <QIntValidator>
 
 AddEditShipDialog::AddEditShipDialog(QWidget *parent, bool isEdit)
