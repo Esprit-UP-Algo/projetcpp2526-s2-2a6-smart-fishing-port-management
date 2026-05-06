@@ -43,7 +43,7 @@ HistoryDialog::HistoryDialog(QSqlDatabase &db, QWidget *parent)
 
 void HistoryDialog::rafraichir()
 {
-    m_model->setQuery("SELECT id_navire, nom, immatriculation, type, capacite, statut FROM navire_archive ORDER BY id_navire", m_db);
+    m_model->setQuery("SELECT id_navire, nom, immatriculation, type, capacite, tiran_deau, statut FROM navire_archive ORDER BY id_navire", m_db);
     m_model->setHeaderData(1, Qt::Horizontal, tr("Nom"));
     m_model->setHeaderData(2, Qt::Horizontal, tr("Immatriculation"));
 }
@@ -62,8 +62,8 @@ void HistoryDialog::on_pushButton_restaurer_clicked()
 
     QSqlQuery q(m_db);
     // Restaurer : Déplacer de archive vers navire
-    q.prepare("INSERT INTO navire (id_navire, nom, immatriculation, type, capacite, statut) "
-              "SELECT id_navire, nom, immatriculation, type, capacite, statut FROM navire_archive WHERE id_navire = :id");
+    q.prepare("INSERT INTO navire (id_navire, nom, immatriculation, type, capacite, tiran_deau, statut) "
+              "SELECT id_navire, nom, immatriculation, type, capacite, tiran_deau, statut FROM navire_archive WHERE id_navire = :id");
     q.bindValue(":id", id);
     
     if (q.exec()) {

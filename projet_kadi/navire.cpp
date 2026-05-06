@@ -12,6 +12,11 @@
 #include <QPainter>
 #include <QFileDialog>
 #include <QHeaderView>
+#include <QDialog>
+#include <QCheckBox>
+#include <QDialogButtonBox>
+#include <QLabel>
+#include <QVBoxLayout>
 #include "stats_dialog.h"
 #include "history_dialog.h"
 #include "interdit_dialog.h"
@@ -68,6 +73,7 @@ NAVIRE::NAVIRE(QWidget *parent)
               "immatriculation VARCHAR2(100), "
               "type VARCHAR2(100), "
               "capacite NUMBER, "
+              "tiran_deau NUMBER(5,2), "
               "statut VARCHAR2(100))");
     // On ignore l'erreur si elle existe déjà (ORA-00955)
 
@@ -110,7 +116,7 @@ void NAVIRE::rafraichirTable(const QString &filtreNom, const QString &filtreStat
 
     m_currentSort = triOrder;
 
-    QString sql = "SELECT id_navire, nom, immatriculation, type, capacite, statut FROM navire";
+    QString sql = "SELECT id_navire, nom, immatriculation, type, capacite, tiran_deau, statut FROM navire";
     QStringList filters;
 
     if (!filtreNom.isEmpty()) {
@@ -137,7 +143,8 @@ void NAVIRE::rafraichirTable(const QString &filtreNom, const QString &filtreStat
     m_model->setHeaderData(2, Qt::Horizontal, tr("Immatriculation"));
     m_model->setHeaderData(3, Qt::Horizontal, tr("Type"));
     m_model->setHeaderData(4, Qt::Horizontal, tr("Capacité"));
-    m_model->setHeaderData(5, Qt::Horizontal, tr("Statut"));
+    m_model->setHeaderData(5, Qt::Horizontal, tr("Tirant d'eau (m)"));
+    m_model->setHeaderData(6, Qt::Horizontal, tr("Statut"));
 }
 
 void NAVIRE::viderFormulaire()
@@ -147,6 +154,7 @@ void NAVIRE::viderFormulaire()
     ui->lineEdit_immatriculation->clear();
     ui->lineEdit_type->clear();
     ui->spinBox_capacite->setValue(1);
+    ui->doubleSpinBox_tiran_deau->setValue(0.0);
     ui->comboBox_statut->setCurrentIndex(0);
 
     // Revalider après vidage
@@ -176,6 +184,7 @@ void NAVIRE::on_pushButton_ajouter_clicked()
     QString imm = ui->lineEdit_immatriculation->text();
     QString type = ui->lineEdit_type->text();
     int capacite = ui->spinBox_capacite->value();
+    double tiranDeau = ui->doubleSpinBox_tiran_deau->value();
     QString statut = ui->comboBox_statut->currentText();
 
     if (id <= 0 || nom.isEmpty() || imm.isEmpty() || type.isEmpty()) {
@@ -184,14 +193,14 @@ void NAVIRE::on_pushButton_ajouter_clicked()
     }
 
     QSqlQuery query(m_connection.getDb());
-    // insertion explicite de id_navire selon le schéma fourni
-    query.prepare("INSERT INTO navire (id_navire, nom, immatriculation, type, capacite, statut) "
-                  "VALUES (:id, :nom, :immatriculation, :type, :capacite, :statut)");
+    query.prepare("INSERT INTO navire (id_navire, nom, immatriculation, type, capacite, tiran_deau, statut) "
+                  "VALUES (:id, :nom, :immatriculation, :type, :capacite, :tiran_deau, :statut)");
     query.bindValue(":id", id);
     query.bindValue(":nom", nom);
     query.bindValue(":immatriculation", imm);
     query.bindValue(":type", type);
     query.bindValue(":capacite", capacite);
+    query.bindValue(":tiran_deau", tiranDeau);
     query.bindValue(":statut", statut);
 
     if (!query.exec()) {
@@ -224,16 +233,18 @@ void NAVIRE::on_pushButton_modifier_clicked()
     QString imm = ui->lineEdit_immatriculation->text();
     QString type = ui->lineEdit_type->text();
     int capacite = ui->spinBox_capacite->value();
+    double tiranDeau = ui->doubleSpinBox_tiran_deau->value();
     QString statut = ui->comboBox_statut->currentText();
 
     QSqlQuery query(m_connection.getDb());
     query.prepare("UPDATE navire SET nom = :nom, immatriculation = :immatriculation, "
-                  "type = :type, capacite = :capacite, statut = :statut "
+                  "type = :type, capacite = :capacite, tiran_deau = :tiran_deau, statut = :statut "
                   "WHERE id_navire = :id");
     query.bindValue(":nom", nom);
     query.bindValue(":immatriculation", imm);
     query.bindValue(":type", type);
     query.bindValue(":capacite", capacite);
+    query.bindValue(":tiran_deau", tiranDeau);
     query.bindValue(":statut", statut);
     query.bindValue(":id", id);
 
@@ -269,8 +280,8 @@ void NAVIRE::on_pushButton_supprimer_clicked()
 
     QSqlQuery qArc(m_connection.getDb());
     // Archiver avant de supprimer
-    qArc.prepare("INSERT INTO navire_archive (id_navire, nom, immatriculation, type, capacite, statut) "
-                 "SELECT id_navire, nom, immatriculation, type, capacite, statut FROM navire WHERE id_navire = :id");
+    qArc.prepare("INSERT INTO navire_archive (id_navire, nom, immatriculation, type, capacite, tiran_deau, statut) "
+                 "SELECT id_navire, nom, immatriculation, type, capacite, tiran_deau, statut FROM navire WHERE id_navire = :id");
     qArc.bindValue(":id", id);
     qArc.exec();
 
@@ -300,8 +311,9 @@ void NAVIRE::on_tableView_navires_clicked(const QModelIndex &index)
     ui->lineEdit_immatriculation->setText(m_model->data(m_model->index(row, 2)).toString());
     ui->lineEdit_type->setText(m_model->data(m_model->index(row, 3)).toString());
     ui->spinBox_capacite->setValue(m_model->data(m_model->index(row, 4)).toInt());
+    ui->doubleSpinBox_tiran_deau->setValue(m_model->data(m_model->index(row, 5)).toDouble());
 
-    QString statut = m_model->data(m_model->index(row, 5)).toString();
+    QString statut = m_model->data(m_model->index(row, 6)).toString();
     int idx = ui->comboBox_statut->findText(statut);
     if (idx >= 0)
         ui->comboBox_statut->setCurrentIndex(idx);
@@ -359,11 +371,45 @@ void NAVIRE::on_pushButton_tri_desc_clicked()
 
 void NAVIRE::on_pushButton_export_pdf_clicked()
 {
+    // --- Sélection des colonnes ---
+    int totalCols = m_model->columnCount();
+    QDialog colDialog(this);
+    colDialog.setWindowTitle(tr("Colonnes à exporter"));
+    QVBoxLayout *colLayout = new QVBoxLayout(&colDialog);
+    colLayout->addWidget(new QLabel(tr("Sélectionnez les colonnes à inclure dans le PDF :"), &colDialog));
+
+    QList<QCheckBox*> checkboxes;
+    for (int j = 0; j < totalCols; j++) {
+        QString header = m_model->headerData(j, Qt::Horizontal).toString();
+        QCheckBox *cb = new QCheckBox(header, &colDialog);
+        cb->setChecked(true);
+        checkboxes.append(cb);
+        colLayout->addWidget(cb);
+    }
+
+    QDialogButtonBox *btnBox = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &colDialog);
+    connect(btnBox, &QDialogButtonBox::accepted, &colDialog, &QDialog::accept);
+    connect(btnBox, &QDialogButtonBox::rejected, &colDialog, &QDialog::reject);
+    colLayout->addWidget(btnBox);
+
+    if (colDialog.exec() != QDialog::Accepted) return;
+
+    QList<int> selectedCols;
+    for (int j = 0; j < checkboxes.size(); j++) {
+        if (checkboxes[j]->isChecked())
+            selectedCols.append(j);
+    }
+    if (selectedCols.isEmpty()) {
+        QMessageBox::warning(this, tr("Export PDF"), tr("Veuillez sélectionner au moins une colonne."));
+        return;
+    }
+
+    // --- Choix du fichier ---
     QString fileName = QFileDialog::getSaveFileName(this, tr("Exporter en PDF"), "", tr("Fichiers PDF (*.pdf)"));
     if (fileName.isEmpty()) return;
-
     if (!fileName.endsWith(".pdf", Qt::CaseInsensitive)) fileName += ".pdf";
 
+    // --- Génération PDF ---
     QPdfWriter pdfWriter(fileName);
     pdfWriter.setPageSize(QPageSize(QPageSize::A4));
     pdfWriter.setPageOrientation(QPageLayout::Landscape);
@@ -372,40 +418,31 @@ void NAVIRE::on_pushButton_export_pdf_clicked()
     QPainter painter(&pdfWriter);
     if (!painter.isActive()) return;
 
-    int f = 10;
-    QFont font("Arial", f);
-    painter.setFont(font);
-
+    painter.setFont(QFont("Arial", 10));
     painter.drawText(4000, 500, tr("LISTE DES NAVIRES"));
-    
+
     int rowCount = m_model->rowCount();
-    int colCount = m_model->columnCount();
-    
     int x = 500;
     int y = 1500;
     int xStep = 1500;
     int yStep = 500;
 
-    // Headers
-    for (int j = 0; j < colCount; j++) {
-        painter.drawText(x + (j * xStep), y, m_model->headerData(j, Qt::Horizontal).toString());
-    }
-    
-    y += yStep;
-    painter.drawLine(x, y - 100, x + (colCount * xStep), y - 100);
+    for (int j = 0; j < selectedCols.size(); j++)
+        painter.drawText(x + (j * xStep), y, m_model->headerData(selectedCols[j], Qt::Horizontal).toString());
 
-    // Data
+    y += yStep;
+    painter.drawLine(x, y - 100, x + (selectedCols.size() * xStep), y - 100);
+
     for (int i = 0; i < rowCount; i++) {
-        for (int j = 0; j < colCount; j++) {
-            painter.drawText(x + (j * xStep), y, m_model->data(m_model->index(i, j)).toString());
-        }
+        for (int j = 0; j < selectedCols.size(); j++)
+            painter.drawText(x + (j * xStep), y, m_model->data(m_model->index(i, selectedCols[j])).toString());
         y += yStep;
-        if (y > 9000) { // New page if needed
+        if (y > 9000) {
             pdfWriter.newPage();
             y = 1000;
         }
     }
-    
+
     painter.end();
     QMessageBox::information(this, tr("Export PDF"), tr("La liste des navires a été exportée avec succès."));
 }
