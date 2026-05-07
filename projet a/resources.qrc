@@ -1,0 +1,7 @@
+<RCC>
+    <qresource prefix="/">
+        <file>images/port_bg.jpg</file>
+        <file>images/map_port.jpg</file>
+        <file>images/port_aerial.jpg</file>
+    </qresource>
+</RCC>
