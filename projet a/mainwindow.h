@@ -58,10 +58,19 @@ private:
     void setupConnections();
     void setupTableEmployees();
     void setupVisuals();
+    void setupRoleBasedUI();
+    bool canAccessQuais() const;
+    bool canAccessDashboard() const;
+    bool canAccessShips() const;
+    bool canAccessCaptures() const;
+    bool canAccessEmployees() const;
+    bool canAccessSettings() const;
     void loadEmployeesFromDb();
     void updateEmployeeStats();
     void updateSalaryStats();
     void generateAnalyticsPDF();
+
+    QString currentUserRole;
 
 protected:
     void showEvent(QShowEvent *e) override;

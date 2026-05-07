@@ -9,7 +9,7 @@
 
 AddEditEmployeeDialog::AddEditEmployeeDialog(QWidget *parent, bool isEdit)
     : QDialog(parent), lineNom(nullptr), comboPoste(nullptr),
-      lineEmail(nullptr), lineTelephone(nullptr), lineSalaire(nullptr), isEditMode(isEdit)
+      lineEmail(nullptr), lineTelephone(nullptr), linePassword(nullptr), lineSalaire(nullptr), isEditMode(isEdit)
 {
     this->setWindowTitle(isEdit ? "Edit Employee" : "Add New Employee");
     this->setModal(true);
@@ -33,6 +33,11 @@ AddEditEmployeeDialog::AddEditEmployeeDialog(QWidget *parent, bool isEdit)
     lineEmail = new QLineEdit(this);
     lineEmail->setPlaceholderText("name@example.com");
     formLayout->addRow("Email:", lineEmail);
+
+    linePassword = new QLineEdit(this);
+    linePassword->setPlaceholderText("Password");
+    linePassword->setEchoMode(QLineEdit::Password);
+    formLayout->addRow("Password:", linePassword);
 
     lineTelephone = new QLineEdit(this);
     lineTelephone->setPlaceholderText("Phone number");
@@ -104,6 +109,11 @@ QString AddEditEmployeeDialog::getTelephone() const
     return lineTelephone ? lineTelephone->text() : QString();
 }
 
+QString AddEditEmployeeDialog::getPassword() const
+{
+    return linePassword ? linePassword->text() : QString();
+}
+
 double AddEditEmployeeDialog::getSalaire() const
 {
     QString text = lineSalaire ? lineSalaire->text() : "0";
@@ -112,11 +122,12 @@ double AddEditEmployeeDialog::getSalaire() const
 }
 
 void AddEditEmployeeDialog::setEmployeeData(const QString &id, const QString &nom, const QString &poste,
-                                            const QString &email, const QString &telephone, double salary)
+                                            const QString &email, const QString &telephone, const QString &password, double salary)
 {
     if (lineNom) lineNom->setText(nom);
     if (comboPoste) comboPoste->setCurrentText(poste);
     if (lineEmail) lineEmail->setText(email);
+    if (linePassword) linePassword->setText(password);
     if (lineTelephone) lineTelephone->setText(telephone);
     if (lineSalaire) lineSalaire->setText(QString::number(salary, 'f', 0));
 }
@@ -125,6 +136,7 @@ void AddEditEmployeeDialog::onAccepted()
 {
     QString nom = lineNom->text().trimmed();
     QString email = lineEmail->text().trimmed();
+    QString password = linePassword->text();
     QString phone = lineTelephone->text().trimmed();
     QString salaryStr = lineSalaire->text().trimmed();
 
@@ -137,6 +149,12 @@ void AddEditEmployeeDialog::onAccepted()
     if (email.isEmpty() || !isValidEmail(email)) {
         QMessageBox::warning(this, "Error", "Please enter a valid Email address");
         lineEmail->setFocus();
+        return;
+    }
+
+    if (password.isEmpty()) {
+        QMessageBox::warning(this, "Error", "Please enter a Password");
+        linePassword->setFocus();
         return;
     }
 

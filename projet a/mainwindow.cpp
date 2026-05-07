@@ -230,22 +230,6 @@ void MainWindow::setupVisuals()
             QMessageBox::information(this,"Inscription","Contactez votre administrateur pour créer un compte.");
         });
 
-        // Login button with inline error
-        connect(ui->btnLogin, &QPushButton::clicked, this, [this](){
-            QString u = ui->lineUsername->text().trimmed();
-            QString p = ui->linePassword->text();
-            if (u.isEmpty() || p.isEmpty()) {
-                ui->loginErrMsg->setText("Veuillez remplir tous les champs.");
-                ui->loginErrMsg->setVisible(true); return; }
-            if (u != "esprit@gmail.com") {
-                ui->loginErrMsg->setText("Acces refuse : cet email n'est pas autorise.");
-                ui->loginErrMsg->setVisible(true); return; }
-            if (p != "1234") {
-                ui->loginErrMsg->setText("Mot de passe incorrect.");
-                ui->loginErrMsg->setVisible(true); return; }
-            ui->loginErrMsg->setVisible(false);
-            showEmployeesPage(); onShowDashboard();
-        });
         connect(ui->lineUsername, &QLineEdit::textChanged, this, [this](){ ui->loginErrMsg->setVisible(false); });
         connect(ui->linePassword, &QLineEdit::textChanged, this, [this](){ ui->loginErrMsg->setVisible(false); });
         connect(ui->linePassword, &QLineEdit::returnPressed, ui->btnLogin, &QPushButton::click);
@@ -488,6 +472,10 @@ static void showEmployeeControls(Ui::MainWindow *ui)
 
 void MainWindow::onShowQuais()
 {
+    if (!canAccessQuais()) {
+        QMessageBox::warning(this, "Accès refusé", "Vous n'êtes pas autorisé à accéder à cette page.");
+        return;
+    }
     Connection conn;
     if (!conn.createconnect()) {
         QMessageBox::warning(this, "DB Connection", "Unable to connect to database (check DSN/credentials).");
@@ -512,6 +500,10 @@ void MainWindow::onShowQuais()
 
 void MainWindow::onShowDashboard()
 {
+    if (!canAccessDashboard()) {
+        QMessageBox::warning(this, "Accès refusé", "Vous n'êtes pas autorisé à accéder à cette page.");
+        return;
+    }
     Connection conn;
     if (!conn.createconnect()) {
         QMessageBox::warning(this, "DB Connection", "Unable to connect to database (check DSN/credentials).");
@@ -552,6 +544,10 @@ void MainWindow::onShowDashboard()
 
 void MainWindow::onShowShips()
 {
+    if (!canAccessShips()) {
+        QMessageBox::warning(this, "Accès refusé", "Vous n'êtes pas autorisé à accéder à cette page.");
+        return;
+    }
     if (!navireWidget) {
         navireWidget = new GestionNavires(this);
         navireWidget->loadFromDb();
@@ -570,6 +566,10 @@ void MainWindow::onShowShips()
 
 void MainWindow::onShowCaptures()
 {
+    if (!canAccessCaptures()) {
+        QMessageBox::warning(this, "Accès refusé", "Vous n'êtes pas autorisé à accéder à cette page.");
+        return;
+    }
     if (!captureWidget) {
         captureWidget = new GestionCaptures(this);
         captureWidget->loadFromDb();
@@ -588,6 +588,10 @@ void MainWindow::onShowCaptures()
 
 void MainWindow::onShowEmployeesContent()
 {
+    if (!canAccessEmployees()) {
+        QMessageBox::warning(this, "Accès refusé", "Vous n'êtes pas autorisé à accéder à cette page.");
+        return;
+    }
     if (currentModuleWidget) {
         ui->contentLayout->removeWidget(currentModuleWidget);
         currentModuleWidget->hide();
@@ -598,6 +602,85 @@ void MainWindow::onShowEmployeesContent()
     loadEmployeesFromDb();
     updateEmployeeStats();
     updateSalaryStats();
+}
+
+void MainWindow::setupRoleBasedUI()
+{
+    ui->btnQuais->show();
+    ui->btnDashboard->show();
+    ui->btnShips->show();
+    ui->btnCaptures->show();
+    ui->btnEmployees->show();
+    ui->btnSettings->show();
+
+    if (currentUserRole == "Pêcheur") {
+        ui->btnQuais->hide();
+        ui->btnDashboard->hide();
+        ui->btnShips->hide();
+        ui->btnEmployees->hide();
+        ui->btnSettings->hide();
+    } else if (currentUserRole == "Docker") {
+        ui->btnDashboard->hide();
+        ui->btnShips->hide();
+        ui->btnCaptures->hide();
+        ui->btnEmployees->hide();
+        ui->btnSettings->hide();
+    } else if (currentUserRole == "Matelot") {
+        ui->btnQuais->hide();
+        ui->btnDashboard->hide();
+        ui->btnCaptures->hide();
+        ui->btnEmployees->hide();
+        ui->btnSettings->hide();
+    } else if (currentUserRole == "Superviseur") {
+        // show all buttons
+    } else if (currentUserRole == "Chef de quai") {
+        ui->btnDashboard->hide();
+    } else {
+        ui->btnDashboard->hide();
+        ui->btnQuais->hide();
+        ui->btnShips->hide();
+        ui->btnCaptures->hide();
+        ui->btnEmployees->hide();
+        ui->btnSettings->hide();
+    }
+}
+
+bool MainWindow::canAccessQuais() const
+{
+    return currentUserRole == "Docker"
+        || currentUserRole == "Superviseur"
+        || currentUserRole == "Chef de quai";
+}
+
+bool MainWindow::canAccessDashboard() const
+{
+    return currentUserRole == "Superviseur";
+}
+
+bool MainWindow::canAccessShips() const
+{
+    return currentUserRole == "Matelot"
+        || currentUserRole == "Superviseur"
+        || currentUserRole == "Chef de quai";
+}
+
+bool MainWindow::canAccessCaptures() const
+{
+    return currentUserRole == "Pêcheur"
+        || currentUserRole == "Superviseur"
+        || currentUserRole == "Chef de quai";
+}
+
+bool MainWindow::canAccessEmployees() const
+{
+    return currentUserRole == "Superviseur"
+        || currentUserRole == "Chef de quai";
+}
+
+bool MainWindow::canAccessSettings() const
+{
+    return currentUserRole == "Superviseur"
+        || currentUserRole == "Chef de quai";
 }
 
 void MainWindow::showLoginPage()
@@ -622,17 +705,44 @@ void MainWindow::onLoginClicked()
         if (errMsg) { errMsg->setText("⚠  Veuillez remplir tous les champs."); errMsg->setVisible(true); }
         return;
     }
-    if (username != "esprit@gmail.com") {
-        if (errMsg) { errMsg->setText("Acces refuse : cet email n'est pas autorise."); errMsg->setVisible(true); }
+
+    Connection conn;
+    if (!conn.createconnect()) {
+        if (errMsg) { errMsg->setText("Erreur : Connexion base de donnees impossible."); errMsg->setVisible(true); }
         return;
     }
-    if (password != "1234") {
-        if (errMsg) { errMsg->setText("Mot de passe incorrect."); errMsg->setVisible(true); }
+
+    QSqlQuery q;
+    q.prepare("SELECT id, nom, poste FROM employee WHERE email = :email AND password = :password");
+    q.bindValue(":email", username);
+    q.bindValue(":password", password);
+
+    if (!q.exec()) {
+        if (errMsg) { errMsg->setText("Erreur base de donnees : " + q.lastError().text()); errMsg->setVisible(true); }
         return;
     }
-    if (errMsg) errMsg->setVisible(false);
-    showEmployeesPage();
-    onShowDashboard();
+
+    if (q.next()) {
+        if (errMsg) errMsg->setVisible(false);
+        currentUserRole = q.value(2).toString().trimmed();
+        setupRoleBasedUI();
+        showEmployeesPage();
+        if (currentUserRole == "Pêcheur") {
+            onShowCaptures();
+        } else if (currentUserRole == "Docker") {
+            onShowQuais();
+        } else if (currentUserRole == "Matelot") {
+            onShowShips();
+        } else if (currentUserRole == "Superviseur") {
+            onShowDashboard();
+        } else if (currentUserRole == "Chef de quai") {
+            onShowQuais();
+        } else {
+            onShowDashboard();
+        }
+    } else {
+        if (errMsg) { errMsg->setText("Email ou mot de passe incorrect."); errMsg->setVisible(true); }
+    }
 }
 
 void MainWindow::onForgotPasswordClicked()
@@ -647,6 +757,8 @@ void MainWindow::onLogoutClicked()
 {
     QMessageBox::StandardButton reply = QMessageBox::question(this, "Logout", "Are you sure you want to logout?");
     if (reply == QMessageBox::Yes) {
+        currentUserRole.clear();
+        setupRoleBasedUI();
         showLoginPage();
     }
 }
@@ -662,13 +774,14 @@ void MainWindow::onAddEmployeeClicked()
     }
 
     QSqlQuery q;
-    q.prepare("INSERT INTO employee (id, nom, poste, email, telephone, salaire) "
-              "SELECT NVL(MAX(id),0)+1, :nom, :poste, :email, :tel, :sal FROM employee");
-    q.bindValue(":nom",   dialog.getNom());
-    q.bindValue(":poste", dialog.getPoste());
-    q.bindValue(":email", dialog.getEmail());
-    q.bindValue(":tel",   dialog.getTelephone());
-    q.bindValue(":sal",   dialog.getSalaire());
+    q.prepare("INSERT INTO employee (id, nom, poste, email, password, telephone, salaire) "
+              "SELECT NVL(MAX(id),0)+1, :nom, :poste, :email, :password, :tel, :sal FROM employee");
+    q.bindValue(":nom",      dialog.getNom());
+    q.bindValue(":poste",    dialog.getPoste());
+    q.bindValue(":email",    dialog.getEmail());
+    q.bindValue(":password", dialog.getPassword());
+    q.bindValue(":tel",      dialog.getTelephone());
+    q.bindValue(":sal",      dialog.getSalaire());
 
     if (!q.exec()) {
         QMessageBox::critical(this, "Erreur", "Impossible d'ajouter : " + q.lastError().text()); return;
@@ -691,8 +804,22 @@ void MainWindow::onEditEmployeeClicked(int row)
     QString telephone = table->item(row, 4)->text();
     double  salary    = table->item(row, 5)->text().replace(" TND","").toDouble();
 
+    // Fetch password from database
+    Connection connFetch;
+    if (!connFetch.createconnect()) {
+        QMessageBox::warning(this, "Erreur", "Connexion base de donnees impossible."); return;
+    }
+
+    QSqlQuery qFetch;
+    qFetch.prepare("SELECT password FROM employee WHERE id = :id");
+    qFetch.bindValue(":id", id.toInt());
+    QString password;
+    if (qFetch.exec() && qFetch.next()) {
+        password = qFetch.value(0).toString();
+    }
+
     AddEditEmployeeDialog dialog(this, true);
-    dialog.setEmployeeData(id, nom, poste, email, telephone, salary);
+    dialog.setEmployeeData(id, nom, poste, email, telephone, password, salary);
     if (dialog.exec() != QDialog::Accepted) return;
 
     Connection conn;
@@ -701,13 +828,14 @@ void MainWindow::onEditEmployeeClicked(int row)
     }
 
     QSqlQuery q;
-    q.prepare("UPDATE employee SET nom=:nom, poste=:poste, email=:email, telephone=:tel, salaire=:sal WHERE id=:id");
-    q.bindValue(":nom",   dialog.getNom());
-    q.bindValue(":poste", dialog.getPoste());
-    q.bindValue(":email", dialog.getEmail());
-    q.bindValue(":tel",   dialog.getTelephone());
-    q.bindValue(":sal",   dialog.getSalaire());
-    q.bindValue(":id",    id.toInt());
+    q.prepare("UPDATE employee SET nom=:nom, poste=:poste, email=:email, password=:password, telephone=:tel, salaire=:sal WHERE id=:id");
+    q.bindValue(":nom",      dialog.getNom());
+    q.bindValue(":poste",    dialog.getPoste());
+    q.bindValue(":email",    dialog.getEmail());
+    q.bindValue(":password", dialog.getPassword());
+    q.bindValue(":tel",      dialog.getTelephone());
+    q.bindValue(":sal",      dialog.getSalaire());
+    q.bindValue(":id",       id.toInt());
 
     if (!q.exec()) {
         QMessageBox::critical(this, "Erreur", "Impossible de modifier : " + q.lastError().text()); return;

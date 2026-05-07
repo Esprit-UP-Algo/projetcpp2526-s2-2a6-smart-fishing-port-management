@@ -33,10 +33,17 @@ private slots:
 private:
     void setupLoginPage();
     void setupMainInterface();
+    void setupRoleBasedUI();
+    bool canAccessQuais() const;
+    bool canAccessDashboard() const;
+    bool canAccessNavires() const;
+    bool canAccessCaptures() const;
+    bool canAccessUtilisateurs() const;
 
     QStackedLayout *stackedLayout;
     QWidget *loginPage;
     QWidget *mainPage;
+    QString currentUserRole;
 
     QWidget *menuWidget;
     QPushButton *btnQuais;

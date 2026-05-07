@@ -7,7 +7,7 @@
 
 DROP TABLE AFFECTATION  CASCADE CONSTRAINTS PURGE;
 DROP TABLE CAPTURE      CASCADE CONSTRAINTS PURGE;
-DROP TABLE EMPLOYE      CASCADE CONSTRAINTS PURGE;
+DROP TABLE EMPLOYEE     CASCADE CONSTRAINTS PURGE;
 DROP TABLE NAVIRE       CASCADE CONSTRAINTS PURGE;
 DROP TABLE QUAI         CASCADE CONSTRAINTS PURGE;
 
@@ -43,16 +43,17 @@ CREATE TABLE NAVIRE (
 
 CREATE SEQUENCE SEQ_NAVIRE START WITH 1 INCREMENT BY 1 NOCACHE;
 
--- ── 4. TABLE EMPLOYE ────────────────────────────────────────────────────────
+-- ── 4. TABLE EMPLOYEE ──────────────────────────────────────────────────────
 
-CREATE TABLE EMPLOYE (
+CREATE TABLE EMPLOYEE (
     id               NUMBER        NOT NULL,
     nom              VARCHAR2(100) NOT NULL,
     poste            VARCHAR2(100),
     email            VARCHAR2(150),
+    password         VARCHAR2(100),
     telephone        VARCHAR2(20),
     salaire          NUMBER(10,2),
-    CONSTRAINT PK_EMPLOYE PRIMARY KEY (id)
+    CONSTRAINT PK_EMPLOYEE PRIMARY KEY (id)
 );
 
 -- ── 5. TABLE CAPTURE ────────────────────────────────────────────────────────
@@ -94,7 +95,7 @@ CREATE INDEX IDX_QUAI_ETAT         ON QUAI(ETAT);
 CREATE INDEX IDX_CAPTURE_NAVIRE    ON CAPTURE(ID_NAVIRE);
 CREATE INDEX IDX_CAPTURE_DATE      ON CAPTURE(DATE_CAPTURE);
 CREATE INDEX IDX_AFFECTATION_QUAI  ON AFFECTATION(QUAI_ID);
-CREATE INDEX IDX_EMPLOYE_LOGIN     ON EMPLOYE(LOGIN);
+CREATE INDEX IDX_EMPLOYEE_EMAIL     ON EMPLOYEE(email);
 
 -- ── 8. DONNÉES DE TEST ──────────────────────────────────────────────────────
 
@@ -107,9 +108,11 @@ INSERT INTO NAVIRE VALUES (SEQ_NAVIRE.NEXTVAL,'Poséidon', 'TN-002','Cargo',    
 INSERT INTO NAVIRE VALUES (SEQ_NAVIRE.NEXTVAL,'Triton',   'TN-003','Palangrier',180,'en mer');
 INSERT INTO NAVIRE VALUES (SEQ_NAVIRE.NEXTVAL,'Atlantis', 'TN-004','Chalutier', 320,'à quai');
 
-INSERT INTO EMPLOYE (id,nom,poste,email,telephone,salaire) VALUES (1,'Ahmed Ben Ali','Capitaine de port','ahmed@port.tn','+216 20 123 456',3500.00);
-INSERT INTO EMPLOYE (id,nom,poste,email,telephone,salaire) VALUES (2,'Fatma Trabelsi','Agent maritime',  'fatma@port.tn', '+216 22 234 567',2800.00);
-INSERT INTO EMPLOYE (id,nom,poste,email,telephone,salaire) VALUES (3,'Mohamed Gharbi','Technicien',      'gharbi@port.tn','+216 24 345 678',2200.00);
+INSERT INTO EMPLOYEE (id,nom,poste,email,password,telephone,salaire) VALUES (1,'Ahmed Ben Ali','Superviseur','ahmed@port.tn','ahmed123','+216 20 123 456',3500.00);
+INSERT INTO EMPLOYEE (id,nom,poste,email,password,telephone,salaire) VALUES (2,'Fatma Trabelsi','Chef de quai',  'fatma@port.tn', 'fatma123','+216 22 234 567',2800.00);
+INSERT INTO EMPLOYEE (id,nom,poste,email,password,telephone,salaire) VALUES (3,'Mohamed Gharbi','Docker',      'gharbi@port.tn','gharbi123','+216 24 345 678',2200.00);
+INSERT INTO EMPLOYEE (id,nom,poste,email,password,telephone,salaire) VALUES (4,'Ali Mansour','Pêcheur',    'ali@port.tn','ali123','+216 26 456 789',2000.00);
+INSERT INTO EMPLOYEE (id,nom,poste,email,password,telephone,salaire) VALUES (5,'Sami Khelifi','Matelot',    'sami@port.tn','sami123','+216 28 567 890',2100.00);
 
 INSERT INTO CAPTURE VALUES ('CAP-001','Neptune',  'Thon',   450, SYSDATE-5,'Ahmed Ben Ali');
 INSERT INTO CAPTURE VALUES ('CAP-002','Triton',   'Sardine',820, SYSDATE-3,'Fatma Trabelsi');
@@ -124,6 +127,6 @@ COMMIT;
 
 SELECT 'QUAI'        AS TABLE_NAME, COUNT(*) AS NB FROM QUAI        UNION ALL
 SELECT 'NAVIRE',      COUNT(*) FROM NAVIRE       UNION ALL
-SELECT 'EMPLOYE',     COUNT(*) FROM EMPLOYE      UNION ALL
+SELECT 'EMPLOYEE',    COUNT(*) FROM EMPLOYEE     UNION ALL
 SELECT 'CAPTURE',     COUNT(*) FROM CAPTURE      UNION ALL
 SELECT 'AFFECTATION', COUNT(*) FROM AFFECTATION;

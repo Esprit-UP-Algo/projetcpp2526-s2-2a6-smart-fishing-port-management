@@ -11,6 +11,8 @@
 #include <QPushButton>
 #include <QLabel>
 #include <QStackedWidget>
+#include <QSqlQuery>
+#include <QMessageBox>
 
 MainWindow::MainWindow(QWidget *parent) : QWidget(parent)
 {
@@ -161,6 +163,8 @@ void MainWindow::setupMainInterface()
     connect(btnLogout, &QPushButton::clicked, this, &MainWindow::onLogoutClicked);
 
     contentStack->setCurrentIndex(0);
+
+    setupRoleBasedUI();
 }
 
 void MainWindow::onLoginClicked()
@@ -173,7 +177,25 @@ void MainWindow::onLoginClicked()
         return;
     }
     
-    if (username == "0" && password == "0") {
+    QSqlQuery query;
+    query.prepare("SELECT poste FROM EMPLOYEE WHERE email = ? AND password = ?");
+    query.addBindValue(username);
+    query.addBindValue(password);
+    
+    if (query.exec() && query.next()) {
+        currentUserRole = query.value(0).toString().trimmed();
+        QMessageBox::information(this, "Connexion réussie", "Bienvenue! Rôle: " + currentUserRole);
+        setupRoleBasedUI();
+        // Set initial page based on role
+        if (currentUserRole == "Pêcheur") {
+            contentStack->setCurrentIndex(3); // Captures
+        } else if (currentUserRole == "Docker") {
+            contentStack->setCurrentIndex(0); // Quais
+        } else if (currentUserRole == "Matelot") {
+            contentStack->setCurrentIndex(2); // Navires
+        } else {
+            contentStack->setCurrentIndex(0); // Default to Quais for Superviseur and Chef de quai
+        }
         stackedLayout->setCurrentIndex(1);
     } else {
         QMessageBox::warning(this, "Erreur", "Nom d'utilisateur ou mot de passe incorrect");
@@ -184,33 +206,121 @@ void MainWindow::onLogoutClicked()
 {
     userEdit->clear();
     passEdit->clear();
+    currentUserRole.clear();
+    setupRoleBasedUI();
     stackedLayout->setCurrentIndex(0);
 }
 
 void MainWindow::showGestionQuais()
 {
+    if (!canAccessQuais()) {
+        QMessageBox::warning(this, "Accès refusé", "Vous n'êtes pas autorisé à accéder à cette page.");
+        return;
+    }
     contentStack->setCurrentIndex(0);
 }
 
 void MainWindow::showDashboard()
 {
-    // refresh dashboard then show
+    if (!canAccessDashboard()) {
+        QMessageBox::warning(this, "Accès refusé", "Vous n'êtes pas autorisé à accéder à cette page.");
+        return;
+    }
     if (dashboardWidget) dashboardWidget->refresh();
-    // dashboard is at index 1
     contentStack->setCurrentWidget(dashboardWidget);
 }
 
 void MainWindow::showGestionNavires()
 {
-    contentStack->setCurrentIndex(1);
+    if (!canAccessNavires()) {
+        QMessageBox::warning(this, "Accès refusé", "Vous n'êtes pas autorisé à accéder à cette page.");
+        return;
+    }
+    contentStack->setCurrentIndex(2);
 }
 
 void MainWindow::showGestionCaptures()
 {
-    contentStack->setCurrentIndex(2);
+    if (!canAccessCaptures()) {
+        QMessageBox::warning(this, "Accès refusé", "Vous n'êtes pas autorisé à accéder à cette page.");
+        return;
+    }
+    contentStack->setCurrentIndex(3);
 }
 
 void MainWindow::showGestionUtilisateurs()
 {
-    contentStack->setCurrentIndex(3);
+    if (!canAccessUtilisateurs()) {
+        QMessageBox::warning(this, "Accès refusé", "Vous n'êtes pas autorisé à accéder à cette page.");
+        return;
+    }
+    contentStack->setCurrentIndex(4);
+}
+
+bool MainWindow::canAccessQuais() const
+{
+    return currentUserRole == "Docker"
+        || currentUserRole == "Superviseur"
+        || currentUserRole == "Chef de quai";
+}
+
+bool MainWindow::canAccessDashboard() const
+{
+    return currentUserRole == "Superviseur";
+}
+
+bool MainWindow::canAccessNavires() const
+{
+    return currentUserRole == "Matelot"
+        || currentUserRole == "Superviseur"
+        || currentUserRole == "Chef de quai";
+}
+
+bool MainWindow::canAccessCaptures() const
+{
+    return currentUserRole == "Pêcheur"
+        || currentUserRole == "Superviseur"
+        || currentUserRole == "Chef de quai";
+}
+
+bool MainWindow::canAccessUtilisateurs() const
+{
+    return currentUserRole == "Superviseur"
+        || currentUserRole == "Chef de quai";
+}
+
+void MainWindow::setupRoleBasedUI()
+{
+    btnQuais->show();
+    btnDashboard->show();
+    btnNavires->show();
+    btnCaptures->show();
+    btnUtilisateurs->show();
+
+    if (currentUserRole == "Pêcheur") {
+        btnQuais->hide();
+        btnDashboard->hide();
+        btnNavires->hide();
+        btnUtilisateurs->hide();
+    } else if (currentUserRole == "Docker") {
+        btnDashboard->hide();
+        btnNavires->hide();
+        btnCaptures->hide();
+        btnUtilisateurs->hide();
+    } else if (currentUserRole == "Matelot") {
+        btnQuais->hide();
+        btnDashboard->hide();
+        btnCaptures->hide();
+        btnUtilisateurs->hide();
+    } else if (currentUserRole == "Superviseur") {
+        // Show all
+    } else if (currentUserRole == "Chef de quai") {
+        btnDashboard->hide();
+    } else {
+        btnQuais->show();
+        btnDashboard->show();
+        btnNavires->show();
+        btnCaptures->show();
+        btnUtilisateurs->show();
+    }
 }
