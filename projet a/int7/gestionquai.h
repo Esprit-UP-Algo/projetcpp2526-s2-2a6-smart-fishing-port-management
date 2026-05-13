@@ -20,6 +20,7 @@
 #include "planning.h"
 #include "affectation.h"
 #include "arduino.h"
+#include "BarriereWidget.h"
 // =====================================================================
 // CLASSE QUAI (modèle de données)
 // =====================================================================
@@ -209,6 +210,8 @@ private:
     QComboBox   *formatCSVBox;
     QLabel      *lblPreviewCSV;
     QPushButton *btnGenererCSV;
+
+    BarriereWidget *barriereWidget;
 
     Arduino a;
     QString data;

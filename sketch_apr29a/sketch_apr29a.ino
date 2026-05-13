@@ -37,7 +37,7 @@ void loop() {
   if (Serial.available() > 0) {
     char data = Serial.read();
 
-    if (data == '1') {
+    if (data == '1' || data == 'O') {
       lcd.clear();
       lcd.setCursor(0, 0);
       lcd.print("Bien venue");
@@ -49,6 +49,10 @@ void loop() {
       lcd.clear();
       lcd.setCursor(0, 0);
       lcd.print("Systeme pret");
-    }  // ✅ ferme le if (data == '1')
-  }    // ✅ ferme le if (Serial.available())
-}      // ✅ ferme le loop()
+    } else if (data == 'F') {
+      monServo.write(0);
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("Systeme pret");
+    }
+  }

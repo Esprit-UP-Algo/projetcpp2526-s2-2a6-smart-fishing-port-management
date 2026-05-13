@@ -1,5 +1,6 @@
 #include "gestionquai.h"
 #include "../quai.h"
+#include "BarriereWidget.h"
 #include <QSqlQuery>
 #include <QSqlError>
 #include <QSqlRecord>
@@ -297,6 +298,15 @@ PageQuai::PageQuai(QWidget *parent)
     pages->addWidget(pageAffectation);
     pages->addWidget(pageExportCSV);
 
+    // Get list of navires for BarriereWidget
+    QList<QString> navires;
+    QSqlQuery query("SELECT nom FROM NAVIRE");
+    while (query.next()) {
+        navires.append(query.value(0).toString());
+    }
+
+    barriereWidget = new BarriereWidget(navires, this);
+
     // Menu latéral
     QWidget *menuQuai = new QWidget;
     menuQuai->setObjectName("menuQuai");
@@ -421,7 +431,7 @@ PageQuai::PageQuai(QWidget *parent)
         searchRow->addSpacing(20); searchRow->addWidget(new QLabel("Trier:")); searchRow->addWidget(sortBox);
 
         QVBoxLayout *cl = new QVBoxLayout(content);
-        cl->addLayout(searchRow); cl->addWidget(tableConsulter);
+        cl->addLayout(searchRow); cl->addWidget(tableConsulter); cl->addWidget(barriereWidget);
 
         QVBoxLayout *pl = new QVBoxLayout(pageConsulter);
         pl->addWidget(titre); pl->addWidget(content); pl->setContentsMargins(0,0,0,0);
